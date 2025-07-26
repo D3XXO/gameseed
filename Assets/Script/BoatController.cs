@@ -12,6 +12,7 @@ public class BoatController : MonoBehaviour
     public int maxHP;
     public int currentHP;
     public event Action<int, int> OnHealthChanged;
+    public int collisionDamage;
 
     [Header("Movement")]
     public float moveSpeed;
@@ -94,6 +95,14 @@ public class BoatController : MonoBehaviour
         }
     }
 
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Enemy") || collision.gameObject.CompareTag("Obstacle"))
+        {
+            TakeDamage(collisionDamage);
+        }
+    }
+
     public Transform GetCollectPivot()
     {
         return collectPivot;
@@ -127,5 +136,10 @@ public class BoatController : MonoBehaviour
                 Debug.Log("Boat is destroyed! Game Over.");
             }
         }
+    }
+
+    public bool IsMoving()
+    {
+        return isMoving;
     }
 }

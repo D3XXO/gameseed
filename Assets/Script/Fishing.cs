@@ -10,7 +10,7 @@ public class Fishing : MonoBehaviour
     public bool isFishing = false;
     public bool fishCaught = false;
     public float fishingProgress = 0f;
-    public float fishingDuration = 10f; // Time to catch fish
+    public float fishingDuration = 10f;
     
     [Header("Balancing Bar")]
     public Image balanceBar;
@@ -30,13 +30,13 @@ public class Fishing : MonoBehaviour
     public Image progressBar;
     public GameObject fishingUI;
 
-    private BoatMovement boatMovement;
+    private BoatController boatMovement;
     private float randomDirectionChangeTimer = 0f;
     private float randomDirectionChangeInterval = 1.5f;
 
     void Start()
     {
-        boatMovement = GetComponent<BoatMovement>();
+        boatMovement = GetComponent<BoatController>();
         fishingUI.SetActive(false);
     }
 
