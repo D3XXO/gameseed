@@ -23,8 +23,18 @@ public class BoatController : MonoBehaviour
     private bool isMoving = false;
     public Transform collectPivot;
 
+    private Rigidbody2D rb;
+
     void Start()
     {
+        rb = GetComponent<Rigidbody2D>();
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody2D>();
+            rb.gravityScale = 0;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        }
+
         transform.position = SnapToGrid(transform.position);
 
         if (collectPivot == null)
