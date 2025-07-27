@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using System;
+using System.Collections;
 
 public class BoatController : MonoBehaviour
 {
@@ -24,6 +25,17 @@ public class BoatController : MonoBehaviour
     public Transform collectPivot;
 
     private Rigidbody2D rb;
+    private float currentSpeed;
+
+    [Header("Lightning Effects")]
+    public float lightningHitSlowdown = 0.7f; 
+    public float slowdownDuration = 1.5f; 
+    private float originalMoveSpeed;
+    private bool isSlowed = false;
+
+    [Header("Knockback Settings")]
+    public float knockbackDuration = 0.5f;
+    private bool isKnockedBack = false;
 
     void Start()
     {
@@ -32,8 +44,13 @@ public class BoatController : MonoBehaviour
         {
             rb = gameObject.AddComponent<Rigidbody2D>();
             rb.gravityScale = 0;
+            rb.drag = 1f; 
+            rb.angularDrag = 2f;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         }
+
+        originalMoveSpeed = moveSpeed;
+        currentSpeed = moveSpeed;
 
         transform.position = SnapToGrid(transform.position);
 
@@ -56,34 +73,57 @@ public class BoatController : MonoBehaviour
     void Update()
     {
         HandleInput();
+    }
+
+    void FixedUpdate()
+    {
         MoveAndRotateBoat();
     }
 
     void HandleInput()
     {
         verticalInput = Input.GetAxisRaw("Vertical");
-        if (verticalInput < 0)
-        {
-            verticalInput = 0;
-        }
+        if (verticalInput < 0) verticalInput = 0;
 
         horizontalInput = Input.GetAxisRaw("Horizontal");
-
         isMoving = Mathf.Abs(verticalInput) > 0.01f;
     }
 
     void MoveAndRotateBoat()
     {
+        if (isKnockedBack) return; // Skip movement during knockback
+
         if (horizontalInput != 0)
         {
-            transform.Rotate(0, 0, -horizontalInput * rotationSpeed * Time.deltaTime);
+            float rotation = -horizontalInput * rotationSpeed * Time.fixedDeltaTime;
+            rb.MoveRotation(rb.rotation + rotation);
         }
 
         if (isMoving)
         {
-            Vector3 movement = transform.up * verticalInput * moveSpeed * Time.deltaTime;
-            transform.position += movement;
+            Vector2 movement = transform.up * verticalInput * currentSpeed * Time.fixedDeltaTime;
+            rb.MovePosition(rb.position + movement);
         }
+    }
+
+    public void ApplyKnockback(Vector2 direction, float force)
+    {
+        if (!isKnockedBack)
+        {
+            StartCoroutine(KnockbackRoutine(direction, force));
+        }
+    }
+
+    private IEnumerator KnockbackRoutine(Vector2 direction, float force)
+    {
+        isKnockedBack = true;
+        rb.velocity = Vector2.zero; // Stop current movement
+        rb.AddForce(direction * force, ForceMode2D.Impulse);
+
+        yield return new WaitForSeconds(knockbackDuration);
+
+        rb.velocity = Vector2.zero; // Stop knockback movement
+        isKnockedBack = false;
     }
 
     public Vector3 SnapToGrid(Vector3 position)
@@ -140,6 +180,9 @@ public class BoatController : MonoBehaviour
             OnHealthChanged?.Invoke(currentHP, maxHP);
             Debug.Log($"Boat took {amount} damage. Current HP: {currentHP}/{maxHP}");
 
+            FlashRed();
+            ApplyLightningSlowdown();
+
             if (currentHP <= 0)
             {
                 Destroy(gameObject);
@@ -148,8 +191,37 @@ public class BoatController : MonoBehaviour
         }
     }
 
+    void ApplyLightningSlowdown()
+    {
+        if (isSlowed) return;
+
+        isSlowed = true;
+        currentSpeed = moveSpeed * lightningHitSlowdown;
+        Invoke(nameof(ResetSpeed), slowdownDuration);
+    }
+
+    void ResetSpeed()
+    {
+        currentSpeed = moveSpeed;
+        isSlowed = false;
+    }
+
     public bool IsMoving()
     {
         return isMoving;
+    }
+
+    public void FlashRed()
+    {
+        StartCoroutine(FlashRoutine());
+    }
+
+    IEnumerator FlashRoutine()
+    {
+        SpriteRenderer renderer = GetComponent<SpriteRenderer>();
+        Color original = renderer.color;
+        renderer.color = Color.red;
+        yield return new WaitForSeconds(0.2f);
+        renderer.color = original;
     }
 }
