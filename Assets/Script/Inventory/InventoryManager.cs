@@ -43,7 +43,6 @@ public class InventoryManager : MonoBehaviour
 
     public void ResetInventoryState()
     {
-        Debug.Log("Resetting InventoryManager state.");
         foreach (InventorySlot slot in inventorySlots)
         {
             slot.Clear();
@@ -66,7 +65,6 @@ public class InventoryManager : MonoBehaviour
     {
         if (inventorySlotIndex < 0 || inventorySlotIndex >= inventorySlots.Count)
         {
-            Debug.LogWarning("Invalid inventory slot index.");
             return false;
         }
 
@@ -87,7 +85,6 @@ public class InventoryManager : MonoBehaviour
         activeHandSlot.itemData = selectedSlot.itemData;
         activeHandSlot.amount = 1;
 
-        Debug.Log($"Active hand item set to: {activeHandSlot.itemData.itemName}");
         TriggerActiveHandChanged(activeHandSlot.itemData);
         return true;
     }
@@ -96,7 +93,6 @@ public class InventoryManager : MonoBehaviour
     {
         if (!activeHandSlot.IsEmpty())
         {
-            Debug.Log("Active hand item cleared.");
             activeHandSlot.Clear();
             TriggerActiveHandChanged(null);
         }
@@ -106,7 +102,6 @@ public class InventoryManager : MonoBehaviour
     {
         if (itemToAdd == null)
         {
-            Debug.LogWarning("Attempted to add null item.");
             return false;
         }
 
@@ -118,7 +113,6 @@ public class InventoryManager : MonoBehaviour
                 {
                     slot.AddAmount(amount);
                     TriggerInventoryChanged();
-                    Debug.Log($"Added {amount} {itemToAdd.itemName} to existing stack.");
                     return true;
                 }
             }
@@ -131,12 +125,10 @@ public class InventoryManager : MonoBehaviour
                 slot.itemData = itemToAdd;
                 slot.amount = amount;
                 TriggerInventoryChanged();
-                Debug.Log($"Added {amount} {itemToAdd.itemName} to a new slot.");
                 return true;
             }
         }
 
-        Debug.LogWarning($"Inventory is full! Could not add {itemToAdd.itemName}.");
         return false;
     }
 
@@ -156,11 +148,9 @@ public class InventoryManager : MonoBehaviour
                 }
             }
             TriggerInventoryChanged();
-            Debug.Log($"Removed {amount} {itemToRemove.itemName}.");
             return true;
         }
 
-        Debug.LogWarning($"Could not remove {amount} {itemToRemove.itemName}. Not enough items or item not found.");
         return false;
     }
 
@@ -190,7 +180,6 @@ public class InventoryManager : MonoBehaviour
     {
         if (itemToUse == null)
         {
-            Debug.LogWarning("Attempted to use null item.");
             return false;
         }
 
@@ -209,24 +198,20 @@ public class InventoryManager : MonoBehaviour
                         {
                             boat.Heal(itemToUse.healAmount);
                             RemoveItem(itemToUse, 1);
-                            Debug.Log($"Used {itemToUse.itemName} to heal.");
                             return true;
                         }
                         else
                         {
-                            Debug.Log("Boat is already at full HP. Cannot use " + itemToUse.itemName);
                             return false;
                         }
                     }
                     else
                     {
-                        Debug.LogWarning("BoatController not found. Cannot use consumable.");
                         return false;
                     }
             }
         }
 
-        Debug.LogWarning($"Cannot use {itemToUse.itemName}. Not found in inventory.");
         return false;
     }
 }

@@ -1,10 +1,10 @@
 using TMPro;
 using UnityEngine;
-using WorldTime; // This imports the namespace
+using WorldTime;
 
 public class DayDisplay : MonoBehaviour
 {
-    [SerializeField] private WorldTime.WorldTime _worldTime; // Fully qualified name
+    [SerializeField] private WorldTime.WorldTime _worldTime;
     [SerializeField] private TMP_Text _dayText;
 
     private void Awake()

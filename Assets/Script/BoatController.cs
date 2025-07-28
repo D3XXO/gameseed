@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using System;
 using System.Collections;
+using UnityEngine.Rendering.Universal;
 
 public class BoatController : MonoBehaviour
 {
@@ -21,21 +22,26 @@ public class BoatController : MonoBehaviour
     public float gridSize;
     private float verticalInput;
     private float horizontalInput;
-    private bool isMoving = false;
+    private bool _isMoving = false;
+    private bool movementEnabled = true;
     public Transform collectPivot;
 
     private Rigidbody2D rb;
     private float currentSpeed;
 
     [Header("Lightning Effects")]
-    public float lightningHitSlowdown = 0.7f; 
-    public float slowdownDuration = 1.5f; 
+    public float lightningHitSlowdown;
+    public float slowdownDuration;
     private float originalMoveSpeed;
     private bool isSlowed = false;
 
     [Header("Knockback Settings")]
-    public float knockbackDuration = 0.5f;
+    public float knockbackDuration;
     private bool isKnockedBack = false;
+
+    [Header("Lighting")]
+    public Light2D boatLight;
+    private bool isLightOn = false;
 
     void Start()
     {
@@ -44,7 +50,7 @@ public class BoatController : MonoBehaviour
         {
             rb = gameObject.AddComponent<Rigidbody2D>();
             rb.gravityScale = 0;
-            rb.drag = 1f; 
+            rb.drag = 1f;
             rb.angularDrag = 2f;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         }
@@ -66,6 +72,16 @@ public class BoatController : MonoBehaviour
             }
         }
 
+        if (boatLight == null)
+        {
+            boatLight = GetComponentInChildren<Light2D>();
+        }
+
+        if (boatLight != null)
+        {
+            boatLight.enabled = false;
+        }
+
         currentHP = maxHP;
         OnHealthChanged?.Invoke(currentHP, maxHP);
     }
@@ -73,6 +89,7 @@ public class BoatController : MonoBehaviour
     void Update()
     {
         HandleInput();
+        HandleLightingInput();
     }
 
     void FixedUpdate()
@@ -86,12 +103,12 @@ public class BoatController : MonoBehaviour
         if (verticalInput < 0) verticalInput = 0;
 
         horizontalInput = Input.GetAxisRaw("Horizontal");
-        isMoving = Mathf.Abs(verticalInput) > 0.01f;
+        _isMoving = Mathf.Abs(verticalInput) > 0.01f;
     }
 
     void MoveAndRotateBoat()
     {
-        if (isKnockedBack) return; // Skip movement during knockback
+        if (isKnockedBack || !movementEnabled) return;
 
         if (horizontalInput != 0)
         {
@@ -99,7 +116,7 @@ public class BoatController : MonoBehaviour
             rb.MoveRotation(rb.rotation + rotation);
         }
 
-        if (isMoving)
+        if (_isMoving)
         {
             Vector2 movement = transform.up * verticalInput * currentSpeed * Time.fixedDeltaTime;
             rb.MovePosition(rb.position + movement);
@@ -117,12 +134,12 @@ public class BoatController : MonoBehaviour
     private IEnumerator KnockbackRoutine(Vector2 direction, float force)
     {
         isKnockedBack = true;
-        rb.velocity = Vector2.zero; // Stop current movement
+        rb.velocity = Vector2.zero;
         rb.AddForce(direction * force, ForceMode2D.Impulse);
 
         yield return new WaitForSeconds(knockbackDuration);
 
-        rb.velocity = Vector2.zero; // Stop knockback movement
+        rb.velocity = Vector2.zero;
         isKnockedBack = false;
     }
 
@@ -147,9 +164,23 @@ public class BoatController : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Enemy") || collision.gameObject.CompareTag("Obstacle"))
+        if (collision.gameObject.CompareTag("Obstacle"))
         {
-            TakeDamage(collisionDamage);
+            Rigidbody2D rb = GetComponent<Rigidbody2D>();
+            if (rb != null)
+            {
+                rb.velocity = Vector2.zero;
+            }
+
+            TakeDamage(collisionDamage, false);
+        }
+        else if (collision.gameObject.CompareTag("Enemy"))
+        {
+            TakeDamage(collisionDamage, false);
+        }
+        else if (collision.gameObject.CompareTag("Thunder"))
+        {
+            TakeDamage(collisionDamage, true);
         }
     }
 
@@ -164,31 +195,49 @@ public class BoatController : MonoBehaviour
         {
             currentHP = Mathf.Min(currentHP + amount, maxHP);
             OnHealthChanged?.Invoke(currentHP, maxHP);
-            Debug.Log($"Boat healed for {amount} HP. Current HP: {currentHP}/{maxHP}");
-        }
-        else
-        {
-            Debug.Log("Boat is already at full HP.");
         }
     }
 
-    public void TakeDamage(int amount)
+    public void TakeDamage(int amount, bool applyFlash = true)
     {
         if (currentHP > 0)
         {
             currentHP = Mathf.Max(currentHP - amount, 0);
             OnHealthChanged?.Invoke(currentHP, maxHP);
-            Debug.Log($"Boat took {amount} damage. Current HP: {currentHP}/{maxHP}");
 
-            FlashRed();
+            if (applyFlash)
+            {
+                FlashRed();
+            }
             ApplyLightningSlowdown();
 
             if (currentHP <= 0)
             {
                 Destroy(gameObject);
-                Debug.Log("Boat is destroyed! Game Over.");
             }
         }
+    }
+
+    void HandleLightingInput()
+    {
+        if (Input.GetMouseButtonDown(2))
+        {
+            ToggleBoatLight();
+        }
+    }
+
+    void ToggleBoatLight()
+    {
+        if (boatLight != null)
+        {
+            isLightOn = !isLightOn;
+            boatLight.enabled = isLightOn;
+        }
+    }
+
+    public bool IsLightOn()
+    {
+        return isLightOn;
     }
 
     void ApplyLightningSlowdown()
@@ -208,7 +257,20 @@ public class BoatController : MonoBehaviour
 
     public bool IsMoving()
     {
-        return isMoving;
+        return _isMoving && movementEnabled;
+    }
+
+    public void SetMovementEnabled(bool enable)
+    {
+        movementEnabled = enable;
+        if (!enable)
+        {
+            if (rb != null)
+            {
+                rb.velocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+            }
+        }
     }
 
     public void FlashRed()

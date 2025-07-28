@@ -15,10 +15,6 @@ public class BoatHealthUI : MonoBehaviour
             boatController.OnHealthChanged += UpdateHealthUI;
             UpdateHealthUI(boatController.maxHP, boatController.maxHP);
         }
-        else
-        {
-            Debug.LogError("BoatController not found in scene. Boat health UI will not function.");
-        }
     }
 
     void OnDestroy()

@@ -51,7 +51,6 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
         }
         else if (eventData.button == PointerEventData.InputButton.Right)
         {
-            Debug.Log($"Right-clicked on slot {slotIndex}: {assignedSlot.itemData.itemName}");
             InventoryManager.Instance.UseItem(assignedSlot.itemData);
         }
     }

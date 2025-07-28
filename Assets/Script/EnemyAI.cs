@@ -20,10 +20,6 @@ public class EnemyAI : MonoBehaviour
     public float chaseRange;
     public LayerMask playerLayer;
 
-    [Header("Damage")]
-    public int damageAmount;
-    public float collisionCooldown;
-
     [Header("Lifespawn")]
     public float lifeDuration;
 
@@ -58,7 +54,6 @@ public class EnemyAI : MonoBehaviour
         {
             BoatController playerBoat = FindObjectOfType<BoatController>();
             if (playerBoat != null) playerTarget = playerBoat.transform;
-            else Debug.LogWarning("Player (BoatController) not found for EnemyAI.");
         }
     }
 
@@ -98,17 +93,26 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        BoatController playerBoatController = playerTarget.GetComponent<BoatController>();
+        bool canBeDetected = true;
+
+        if (playerBoatController != null)
+        {
+            if (!playerBoatController.IsLightOn() && currentState != State.Chasing)
+            {
+                canBeDetected = false;
+            }
+        }
+
         float distanceToPlayer = Vector2.Distance(transform.position, playerTarget.position);
 
-        if (distanceToPlayer <= chaseRange && currentState != State.Chasing)
+        if (distanceToPlayer <= chaseRange && currentState != State.Chasing && canBeDetected)
         {
             currentState = State.Chasing;
-            Debug.Log("Shark: Player detected! Chasing.");
         }
-        else if (distanceToPlayer > chaseRange && currentState == State.Chasing)
+        else if ((distanceToPlayer > chaseRange || !canBeDetected) && currentState == State.Chasing)
         {
             currentState = State.Patrolling;
-            Debug.Log("Shark: Player out of range. Returning to patrol.");
 
             currentPatrolAngle = Vector2.SignedAngle(Vector2.right, (Vector2)transform.position - (Vector2)initialSpawnPosition);
             lifeTimer = lifeDuration;
@@ -134,7 +138,6 @@ public class EnemyAI : MonoBehaviour
         {
             patrolTurnDirection *= -1;
             patrolTurnTimer = patrolTurnChangeInterval;
-            Debug.Log("Shark: Changed patrol turn direction.");
         }
     }
 
@@ -164,18 +167,9 @@ public class EnemyAI : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Player") && Time.time >= lastCollisionTime + collisionCooldown)
+        if (collision.gameObject.CompareTag("Player"))
         {
-            BoatController playerBoat = collision.gameObject.GetComponent<BoatController>();
-            if (playerBoat != null)
-            {
-                playerBoat.TakeDamage(damageAmount);
-                lastCollisionTime = Time.time;
-
-                Debug.Log($"Shark collided with player! Player HP: {playerBoat.currentHP}");
-
-                DestroyShark();
-            }
+            DestroyShark();
         }
     }
 

@@ -27,10 +27,6 @@ public class UIButton : MonoBehaviour
             {
                 masterDb.Init();
             }
-            else
-            {
-                Debug.LogError("MasterItemDatabase asset not found in Resources folder. Make sure it exists and named 'MasterItemDatabase'.");
-            }
         }
 
         if (SceneManager.GetActiveScene().name == "Main Menu")
@@ -94,7 +90,6 @@ public class UIButton : MonoBehaviour
         {
             InventoryManager.Instance.ResetInventoryState();
         }
-        Debug.Log("Starting new game. Old save data cleared and InventoryManager reset.");
 
         SceneManager.LoadScene("Gameplay");
         Time.timeScale = 1f;
@@ -115,7 +110,6 @@ public class UIButton : MonoBehaviour
 
         SceneManager.LoadScene(sceneToLoad);
         Time.timeScale = 1f;
-        Debug.Log("Loading existing game from scene: " + sceneToLoad);
     }
 
     private void OnGameplaySceneLoadedAndApplyData(Scene scene, LoadSceneMode mode)
@@ -136,7 +130,6 @@ public class UIButton : MonoBehaviour
         {
             GameData dataToApply = SaveLoadManager.Instance.LoadGame();
             SaveLoadManager.Instance.ApplyGameData(dataToApply);
-            Debug.Log($"Applied loaded data to scene {scene.name}.");
         }
 
         SceneManager.sceneLoaded -= OnGameplaySceneLoadedAndApplyData;
@@ -148,11 +141,6 @@ public class UIButton : MonoBehaviour
         if (SaveLoadManager.Instance != null)
         {
             SaveLoadManager.Instance.SaveGame(SaveLoadManager.Instance.GatherGameData());
-            Debug.Log("Game progress saved on Quit.");
-        }
-        else
-        {
-            Debug.LogWarning("SaveLoadManager not found. Game progress not saved on quit.");
         }
 
         Application.Quit();
@@ -185,11 +173,6 @@ public class UIButton : MonoBehaviour
         if (SaveLoadManager.Instance != null)
         {
             SaveLoadManager.Instance.SaveGame(SaveLoadManager.Instance.GatherGameData());
-            Debug.Log("Game progress saved on Load Main Menu.");
-        }
-        else
-        {
-            Debug.LogWarning("SaveLoadManager not found. Game progress not saved on returning to main menu.");
         }
 
         Time.timeScale = 1f;

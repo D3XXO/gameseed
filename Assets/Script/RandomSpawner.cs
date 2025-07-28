@@ -29,10 +29,6 @@ public class RandomSpawner : MonoBehaviour
             {
                 SpawnObject();
             }
-            else
-            {
-                Debug.Log("Max objects reached, waiting for space.");
-            }
         }
     }
 
@@ -68,19 +64,12 @@ public class RandomSpawner : MonoBehaviour
             {
                 collectible.OnItemDestroyed += OnObjectDestroyed;
             }
-
-            Debug.Log($"Spawned {prefabToSpawn.name} at: {randomSpawnPos}");
-        }
-        else
-        {
-            Debug.LogWarning($"Could not find a valid spawn spot for {prefabToSpawn.name} after {maxAttempts} attempts.");
         }
     }
 
     public void OnObjectDestroyed()
     {
         currentObjectsCount--;
-        Debug.Log($"Object destroyed. Current count: {currentObjectsCount}");
     }
 
     void OnDrawGizmosSelected()

@@ -3,228 +3,366 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+[System.Serializable]
+public class Fish
+{
+    public string fishName;
+    public float weight;
+    public float size;
+    public ItemData itemData;
+    public float strength;
+
+    public Fish(string name, float weight, float size, ItemData data = null, float strength = 0.5f)
+    {
+        this.fishName = name;
+        this.weight = weight;
+        this.size = size;
+        this.itemData = data;
+        this.strength = strength;
+    }
+}
+
 public class Fishing : MonoBehaviour
 {
     [Header("Fishing Settings")]
-    public bool canFish = false;
-    public bool isFishing = false;
-    public bool fishCaught = false;
-    public bool isThrowing = false; // New state for throwing
-    public bool fishBiteDetected = false; // New state for fish bite detection
-    public float fishingProgress = 0f;
-    public float fishingDuration = 10f;
+    private bool canFish = false;
+    private bool isFishing = false;
+    private bool fishCaught = false;
+    private bool isThrowing = false;
+    private bool fishBiteDetected = false;
+    private bool waitingToReel = false;
+    public float fishingProgress;
 
     [Header("Throwing Settings")]
-    public float throwDistance = 10f; // Distance the line can be thrown
-    public float throwPower = 0f; // Power based on how many times space is pressed
-    public float maxThrowPower = 5f; // Maximum power for throwing
+    public float throwDistance;
+    public float throwPower;
+    public float maxThrowPower;
+    public float throwPowerCycleSpeed;
+    private int throwPowerDirection;
 
     [Header("Balancing Bar")]
-    public Image balanceBar;
-    public float balancePosition = 0f;
-    public float balanceTarget = 0f;
-    public float balanceSpeed = 2f;
-    public float balanceSensitivity = 0.5f;
+    public RectTransform balancePlayerIndicator;
+    public RectTransform balanceTargetIndicator;
+    public float balancePosition;
+    public float balanceTarget;
+    public float balanceSpeed;
+    public float balanceSensitivity;
+    public float balanceTargetChangeMinInterval;
+    public float balanceTargetChangeMaxInterval;
+    public float balanceRandomTargetMin;
+    public float balanceRandomTargetMax;
 
     [Header("Reeling Bar")]
-    public Image reelBar;
-    public float reelPower = 0f;
-    public float reelGainSpeed = 1f;
-    public float reelDecaySpeed = 0.5f;
-    public float maxReelPower = 100f;
+    public Image reelIndicator;
+    public float reelPower;
+    public float reelGainSpeed;
+    public float reelDecaySpeed;
+    public float maxReelPower;
+    public float tensionIncreaseRate;
+    public float tensionDecreaseRate;
+    public float maxLineTension;
+    public float currentLineTension;
 
     [Header("UI Elements")]
     public Image progressBar;
     public GameObject fishingUI;
     public Camera mainCamera;
-    public float zoomedFOV = 30f;
-    public float normalFOV = 60f;
-    public float zoomSpeed = 2f;
+    public float zoomedSize;
+    public float normalSize;
+    public float zoomSpeed;
+    public Image reelBarBackground;
+    public Image balanceBarBackground;
+    public Text tensionText;
+
+    [Header("Bar Visuals Properties")]
+    public float reelBarVisualRange;
+    public float balanceBarVisualRange;
 
     [Header("Fish Data")]
     public List<Fish> fishList;
+    private Fish currentFish;
 
     [Header("Bite Indicator")]
-    public GameObject biteIndicator; // UI element to indicate a fish bite
+    public GameObject biteIndicator;
+
+    [Header("Fishing Line Visuals")]
+    public LineRenderer lineRenderer;
+    public Transform fishingRodTip;
+    public float lineOffsetZ = 0.1f;
 
     private BoatController boatMovement;
-    private float randomDirectionChangeTimer = 0f;
-    private float randomDirectionChangeInterval = 1.5f;
+    private float randomTargetChangeTimer = 0f;
+    private float currentRandomTargetChangeInterval;
+
+    [SerializeField] private WorldTime.WorldTime worldTime;
 
     void Start()
     {
         boatMovement = GetComponent<BoatController>();
-        fishingUI.SetActive(false);
-        biteIndicator.SetActive(false); // Hide bite indicator initially
-        if (mainCamera == null)
+        if (fishingUI != null) fishingUI.SetActive(false);
+        if (biteIndicator != null) biteIndicator.SetActive(false);
+        if (tensionText != null) tensionText.text = "";
+
+        if (mainCamera == null) mainCamera = Camera.main;
+
+        if (lineRenderer != null)
         {
-            mainCamera = Camera.main;
+            lineRenderer.positionCount = 2;
+            lineRenderer.enabled = false;
         }
 
-        InitializeFishList();
+        if (fishingRodTip == null)
+        {
+            fishingRodTip = transform.Find("FishingRodTip") ?? transform;
+        }
     }
 
     void Update()
     {
-        if (!isFishing && boatMovement != null && !boatMovement.IsMoving())
+        if (boatMovement != null)
+        {
+            boatMovement.SetMovementEnabled(!(isFishing || isThrowing || fishBiteDetected));
+        }
+
+
+        if (boatMovement != null && !boatMovement.IsMoving())
         {
             canFish = true;
         }
-        else if (boatMovement != null && boatMovement.IsMoving())
+        else
         {
             canFish = false;
-            if (isFishing || isThrowing)
-            {
-                CancelFishing();
-            }
+            if (isFishing || isThrowing || fishBiteDetected) CancelFishing();
         }
 
-        if (canFish && !isFishing && !isThrowing && Input.GetKeyDown(KeyCode.F))
+        if (canFish && !isFishing && !isThrowing && !fishBiteDetected && Input.GetKeyDown(KeyCode.F))
         {
-            StartFishing();
+            StartThrowing();
         }
 
         if (isThrowing)
         {
             HandleThrowing();
+            UpdateFishingLineVisual();
         }
-
-        if (isFishing && !fishCaught)
+        else if (isFishing && !fishCaught)
         {
             HandleFishingProgress();
             HandleBalanceBar();
             HandleReelBar();
+            UpdateFishingLineVisual();
 
-            if (fishingProgress >= 1f)
+            if (currentLineTension >= maxLineTension || (currentLineTension <= 0f && fishingProgress < 0.99f))
             {
-                CatchFish();
+                CancelFishing();
             }
+
+            if (fishingProgress >= 1f) CatchFish();
         }
 
-        if (fishBiteDetected)
+        if (waitingToReel && Input.GetKeyDown(KeyCode.Space))
         {
-            // Wait for player to acknowledge the bite
-            if (Input.GetKeyDown(KeyCode.E)) // Press E to acknowledge the bite
-            {
-                fishBiteDetected = false; // Reset bite detection
-                fishingProgress = 0f; // Reset fishing progress
-                reelPower = 0f; // Reset reel power
-                balancePosition = 0f; // Reset balance position
-                biteIndicator.SetActive(false); // Hide bite indicator
-                Debug.Log("Fish is biting! Start reeling!");
-            }
+            BeginFishing();
+        }
+
+        if (tensionText != null)
+        {
+            tensionText.text = $"Tension: {Mathf.RoundToInt(currentLineTension)} / {Mathf.RoundToInt(maxLineTension)}";
         }
 
         HandleCameraZoom();
     }
 
-    void StartFishing()
+    void StartThrowing()
     {
-        isThrowing = true; // Start throwing state
-        fishingUI.SetActive(true);
-        mainCamera.fieldOfView = zoomedFOV; // Zoom in when fishing starts
-        throwPower = 0f; // Reset throw power
+        isThrowing = true;
+        isFishing = false;
+        fishBiteDetected = false;
+        fishCaught = false;
+
+        if (fishingUI != null) fishingUI.SetActive(true);
+        throwPower = 0f;
+        throwPowerDirection = 1;
+
+        if (reelBarBackground != null) reelBarBackground.gameObject.SetActive(true);
+        if (reelIndicator != null) reelIndicator.gameObject.SetActive(true);
+        if (balanceBarBackground != null) balanceBarBackground.gameObject.SetActive(false);
+        if (balancePlayerIndicator != null) balancePlayerIndicator.gameObject.SetActive(false);
+        if (balanceTargetIndicator != null) balanceTargetIndicator.gameObject.SetActive(false);
+        if (progressBar != null) progressBar.gameObject.SetActive(false);
+
+        randomTargetChangeTimer = 0f;
+        currentRandomTargetChangeInterval = Random.Range(balanceTargetChangeMinInterval, balanceTargetChangeMaxInterval);
     }
 
     void HandleThrowing()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        throwPower += throwPowerDirection * throwPowerCycleSpeed * Time.deltaTime;
+        if (throwPower >= maxThrowPower)
         {
-            throwPower += 1f; // Increase throw power for each space press
-            throwPower = Mathf.Clamp(throwPower, 0f, maxThrowPower); // Clamp to max throw power
+            throwPower = maxThrowPower;
+            throwPowerDirection = -1;
+        }
+        else if (throwPower <= 0f)
+        {
+            throwPower = 0f;
+            throwPowerDirection = 1;
+        }
+
+        if (reelIndicator != null)
+        {
+            reelIndicator.fillAmount = throwPower / maxThrowPower;
         }
 
         if (Input.GetKeyUp(KeyCode.Space))
         {
-            // Throw the line when space is released
-            isThrowing = false; // Exit throwing state
-            StartCoroutine(DetectFishBite()); // Start detecting fish bite
-            Debug.Log($"Line thrown with power: {throwPower}, Distance: {throwDistance}");
+            isThrowing = false;
 
-            // Reset throw power for the next throw
-            throwPower = 0f;
+            if (reelBarBackground != null) reelBarBackground.gameObject.SetActive(true);
+            if (reelIndicator != null) reelIndicator.gameObject.SetActive(true);
+            if (balanceBarBackground != null) balanceBarBackground.gameObject.SetActive(true);
+            if (balancePlayerIndicator != null) balancePlayerIndicator.gameObject.SetActive(true);
+            if (balanceTargetIndicator != null) balanceTargetIndicator.gameObject.SetActive(true);
+            if (progressBar != null) progressBar.gameObject.SetActive(true);
+
+            if (throwPower <= 0.1f)
+            {
+                Debug.Log("Throw too weak.");
+                CancelFishing();
+                return;
+            }
+
+            StartCoroutine(DetectFishBite());
         }
     }
 
     IEnumerator DetectFishBite()
     {
-        // Simulate a delay for fish to bite
-        yield return new WaitForSeconds(2f); // Wait for 2 seconds (you can adjust this)
+        fishCaught = false;
 
-        // Random chance for a fish to bite
-        if (Random.value < 0.5f) // 50% chance to detect a bite
+        if (lineRenderer != null && fishingRodTip != null)
         {
-            fishBiteDetected = true; // Set bite detected
-            biteIndicator.SetActive(true); // Show bite indicator
-            Debug.Log("A fish has bitten the bait!");
+            lineRenderer.enabled = true;
+            Vector3 start = fishingRodTip.position;
+            Vector3 end = fishingRodTip.position + transform.right * throwPower * throwDistance / maxThrowPower;
+            start.z += lineOffsetZ;
+            end.z += lineOffsetZ;
+
+            lineRenderer.SetPosition(0, start);
+            lineRenderer.SetPosition(1, end);
+        }
+
+        float biteDelay = Mathf.Clamp(throwDistance / (throwPower + 1f), 0.5f, 5f);
+        yield return new WaitForSeconds(biteDelay);
+
+        float biteChance = 0.5f + (throwPower / maxThrowPower * 0.3f);
+        if (Random.value < biteChance)
+        {
+            fishBiteDetected = true;
+            waitingToReel = true;
+            if (biteIndicator != null) biteIndicator.SetActive(true);
+            Debug.Log("Fish is biting! Press Space to reel!");
+
+            yield return new WaitForSeconds(2f);
+
+            if (waitingToReel)
+            {
+                Debug.Log("No reel input detected. Cancelling fishing.");
+                CancelFishing();
+            }
         }
         else
         {
-            Debug.Log("No fish bite detected.");
+            Debug.Log("No fish bite. Try again.");
+            CancelFishing();
         }
+    }
+
+    void BeginFishing()
+    {
+        waitingToReel = false;
+        fishBiteDetected = false;
+        isFishing = true;
+
+        if (worldTime != null) worldTime.SetPaused(true);
+
+        currentFish = fishList[Random.Range(0, fishList.Count)];
+        if (currentFish == null)
+        {
+            Debug.LogError("No fish found.");
+            CancelFishing();
+            return;
+        }
+
+        fishingProgress = 0f;
+        reelPower = maxReelPower / 2f;
+        balancePosition = 0f;
+        balanceTarget = Random.Range(balanceRandomTargetMin, balanceRandomTargetMax);
+        currentLineTension = maxLineTension / 2f;
+
+        if (biteIndicator != null) biteIndicator.SetActive(false);
+
+        Debug.Log($"Fishing started! Target: {currentFish.fishName}");
     }
 
     void CancelFishing()
     {
         isFishing = false;
-        isThrowing = false; // Reset throwing state
+        isThrowing = false;
         fishCaught = false;
-        fishBiteDetected = false; // Reset fish bite detection
-        biteIndicator.SetActive(false); // Hide bite indicator
-        fishingUI.SetActive(false);
+        fishBiteDetected = false;
+        waitingToReel = false;
+
+        ResetUIElements();
+
+        if (worldTime != null) worldTime.SetPaused(false);
     }
 
     void CatchFish()
     {
         fishCaught = true;
         isFishing = false;
-        fishingUI.SetActive(false);
-        
-        Fish caughtFish = fishList[Random.Range(0, fishList.Count)];
-        Debug.Log($"Fish caught: {caughtFish.fishName}, Weight: {caughtFish.weight}, Size: {caughtFish.size}");
+
+        ResetUIElements();
+
+        if (fishList != null && fishList.Count > 0 && currentFish != null)
+        {
+            if (currentFish.itemData != null && InventoryManager.Instance != null)
+            {
+                InventoryManager.Instance.AddItem(currentFish.itemData, 1);
+                Debug.Log($"Caught {currentFish.fishName}!");
+            }
+        }
+
+        if (worldTime != null) worldTime.SetPaused(false);
     }
 
     void HandleFishingProgress()
     {
-        float progressRate = 0.1f;
-        progressRate += reelPower / maxReelPower * 0.2f;
-        
+        if (currentFish == null) return;
+
         float balanceAccuracy = 1f - Mathf.Abs(balancePosition - balanceTarget);
-        progressRate *= balanceAccuracy;
-        
-        fishingProgress += progressRate * Time.deltaTime / fishingDuration;
+        float baseChange = Time.deltaTime * 0.1f;
+        float progressRate;
+
+        if (balanceAccuracy > 0.7f)
+        {
+            progressRate = balanceAccuracy * (1f - currentFish.strength) * baseChange;
+        }
+        else if (balanceAccuracy > 0.4f)
+        {
+            progressRate = balanceAccuracy * (0.5f - currentFish.strength * 0.5f) * baseChange;
+        }
+        else
+        {
+            progressRate = -currentFish.strength * baseChange;
+        }
+
+        fishingProgress += progressRate;
         fishingProgress = Mathf.Clamp(fishingProgress, 0f, 1f);
-        
+
         if (progressBar != null)
-        {
             progressBar.fillAmount = fishingProgress;
-        }
-    }
-
-    void HandleBalanceBar()
-    {
-        randomDirectionChangeTimer += Time.deltaTime;
-        if (randomDirectionChangeTimer >= randomDirectionChangeInterval)
-        {
-            randomDirectionChangeTimer = 0f;
-            float changeAmount = Random.Range(-0.5f, 0.5f);
-            balanceTarget = Mathf.Clamp(balanceTarget + changeAmount, -1f, 1f);
-            randomDirectionChangeInterval = Random.Range(0.8f, 2f);
-        }
-
-        float input = 0f;
-        if (Input.GetKey(KeyCode.A)) input -= balanceSensitivity;
-        if (Input.GetKey(KeyCode.D)) input += balanceSensitivity;
-
-        balancePosition += input * Time.deltaTime * balanceSpeed;
-        balancePosition = Mathf.Clamp(balancePosition, -1f, 1f);
-
-        balancePosition = Mathf.MoveTowards(balancePosition, balanceTarget, Time.deltaTime * 0.5f);
-
-        if (balanceBar != null)
-        {
-            balanceBar.fillAmount = 0.5f + balancePosition * 0.5f;
-        }
     }
 
     void HandleReelBar()
@@ -237,35 +375,108 @@ public class Fishing : MonoBehaviour
         {
             reelPower -= reelDecaySpeed * Time.deltaTime * maxReelPower;
         }
-        reelPower = Mathf.Clamp(reelPower, 0f, maxReelPower);
 
-        if (reelBar != null)
+        reelPower = Mathf.Clamp(reelPower, 0f, maxReelPower);
+        if (reelIndicator != null)
         {
-            reelBar.fillAmount = reelPower / maxReelPower;
+            reelIndicator.fillAmount = reelPower / maxReelPower;
+        }
+
+        if (currentFish == null) return;
+
+        float powerNormalized = reelPower / maxReelPower;
+        float tensionChange = 0f;
+
+        if (powerNormalized >= 0.99f || powerNormalized <= 0.01f)
+        {
+            tensionChange = tensionIncreaseRate * 10f * Time.deltaTime * currentFish.strength;
+        }
+        else
+        {
+            if (powerNormalized > 0.9f)
+            {
+                tensionChange = tensionIncreaseRate * (powerNormalized - 0.9f) * Time.deltaTime * currentFish.strength;
+            }
+            else if (powerNormalized < 0.1f)
+            {
+                tensionChange = tensionIncreaseRate * (0.1f - powerNormalized) * Time.deltaTime * currentFish.strength;
+            }
+            else
+            {
+                tensionChange = -tensionDecreaseRate * Time.deltaTime;
+            }
+        }
+
+        currentLineTension += tensionChange;
+        currentLineTension = Mathf.Clamp(currentLineTension, 0f, maxLineTension);
+    }
+
+    void HandleBalanceBar()
+    {
+        if (currentFish == null) return;
+
+        randomTargetChangeTimer += Time.deltaTime;
+        if (randomTargetChangeTimer >= currentRandomTargetChangeInterval)
+        {
+            randomTargetChangeTimer = 0f;
+            balanceTarget = Random.Range(balanceRandomTargetMin, balanceRandomTargetMax);
+            currentRandomTargetChangeInterval = Random.Range(balanceTargetChangeMinInterval, balanceTargetChangeMaxInterval);
+        }
+
+        float input = 0f;
+        if (Input.GetKey(KeyCode.A)) input -= balanceSensitivity;
+        if (Input.GetKey(KeyCode.D)) input += balanceSensitivity;
+
+        float fishInfluence = (Random.value * 2f - 1f) * currentFish.strength * 0.1f * Time.deltaTime;
+        balancePosition += input * Time.deltaTime * balanceSpeed + fishInfluence;
+        balancePosition = Mathf.Clamp(balancePosition, -1f, 1f);
+
+        if (balancePlayerIndicator != null && balanceTargetIndicator != null)
+        {
+            float px = Mathf.Lerp(-balanceBarVisualRange / 2f, balanceBarVisualRange / 2f, (balancePosition + 1f) / 2f);
+            balancePlayerIndicator.anchoredPosition = new Vector2(px, balancePlayerIndicator.anchoredPosition.y);
+
+            float tx = Mathf.Lerp(-balanceBarVisualRange / 2f, balanceBarVisualRange / 2f, (balanceTarget + 1f) / 2f);
+            balanceTargetIndicator.anchoredPosition = new Vector2(tx, balanceTargetIndicator.anchoredPosition.y);
         }
     }
 
     void HandleCameraZoom()
     {
-        if (isFishing)
+        if (mainCamera == null || !mainCamera.orthographic) return;
+
+        float targetSize = (isFishing || isThrowing || fishBiteDetected) ? zoomedSize : normalSize;
+        mainCamera.orthographicSize = Mathf.Lerp(mainCamera.orthographicSize, targetSize, Time.deltaTime * zoomSpeed);
+    }
+
+    void UpdateFishingLineVisual()
+    {
+        if (lineRenderer != null && fishingRodTip != null)
         {
-            mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, zoomedFOV, Time.deltaTime * zoomSpeed);
-        }
-        else
-        {
-            mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, normalFOV, Time.deltaTime * zoomSpeed);
+            Vector3 start = fishingRodTip.position;
+            Vector3 end = fishingRodTip.position + transform.right * throwPower * throwDistance / maxThrowPower;
+            start.z += lineOffsetZ;
+            end.z += lineOffsetZ;
+
+            lineRenderer.SetPosition(0, start);
+            lineRenderer.SetPosition(1, end);
         }
     }
 
-    void InitializeFishList()
+    private void ResetUIElements()
     {
-        fishList = new List<Fish>
-        {
-            new Fish("Aleefish", 2.5f, 30f),
-            new Fish("Dafish", 5.0f, 60f),
-            new Fish("Hafeesh", 3.0f, 40f),
-            new Fish("Nyarvish", 7.0f, 80f),
-            new Fish("Absolish", 4.5f, 50f)
-        };
+        if (fishingUI != null) fishingUI.SetActive(false);
+        if (biteIndicator != null) biteIndicator.SetActive(false);
+        if (tensionText != null) tensionText.text = "";
+
+        if (reelBarBackground != null) reelBarBackground.gameObject.SetActive(false);
+        if (reelIndicator != null) reelIndicator.gameObject.SetActive(false);
+        if (balanceBarBackground != null) balanceBarBackground.gameObject.SetActive(false);
+        if (balancePlayerIndicator != null) balancePlayerIndicator.gameObject.SetActive(false);
+        if (balanceTargetIndicator != null) balanceTargetIndicator.gameObject.SetActive(false);
+        if (progressBar != null) progressBar.gameObject.SetActive(false);
+
+        if (mainCamera != null) mainCamera.orthographicSize = normalSize;
+        if (lineRenderer != null) lineRenderer.enabled = false;
     }
 }

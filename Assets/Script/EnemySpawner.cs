@@ -37,11 +37,7 @@ public class EnemySpawner : MonoBehaviour
 
     public void SpawnImmediate()
     {
-        if (currentSharkCount >= maxSharks)
-        {
-            Debug.Log("Max sharks reached, not spawning new one immediately.");
-            return;
-        }
+        if (currentSharkCount >= maxSharks) return;
 
         Vector3 randomSpawnPos = Vector3.zero;
         bool foundValidSpot = false;
@@ -74,11 +70,9 @@ public class EnemySpawner : MonoBehaviour
                 newSharkAI.Init(this, randomSpawnPos);
                 newSharkAI.OnSharkDestroyed += OnSharkDestroyed;
             }
-            Debug.Log($"Shark spawned at: {randomSpawnPos}. Current sharks: {currentSharkCount}");
         }
         else
         {
-            Debug.LogWarning("Could not find a valid spawn spot for shark. Trying again in 2 seconds.");
             Invoke("SpawnShark", 2f);
         }
     }
@@ -86,6 +80,5 @@ public class EnemySpawner : MonoBehaviour
     void OnSharkDestroyed()
     {
         currentSharkCount--;
-        Debug.Log($"Shark destroyed. Remaining sharks: {currentSharkCount}");
     }
 }

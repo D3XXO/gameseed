@@ -17,8 +17,6 @@ public class InventoryUI : MonoBehaviour
     public Text heldItemNameUI;
     public Transform playerPivotTransform;
 
-    private GameObject currentHeldItemVisual;
-
     private List<InventorySlotUI> uiSlots = new List<InventorySlotUI>();
 
     void Awake()
@@ -78,16 +76,7 @@ public class InventoryUI : MonoBehaviour
                     {
                         inventoryPanel = foundInventoryPanelTransform.gameObject;
                         slotsParent = foundInventoryPanelTransform.Find("Inventory Grid");
-                        Debug.Log("Inventory Panel and Slots Parent re-found in " + scene.name);
                     }
-                    else
-                    {
-                        Debug.LogWarning("Inventory Panel not found in " + scene.name + ". Make sure its named 'Inventory Panel' and is active.");
-                    }
-                }
-                else
-                {
-                    Debug.LogWarning("Main Canvas not found in " + scene.name + ".");
                 }
             }
 
@@ -108,27 +97,14 @@ public class InventoryUI : MonoBehaviour
                 if (heldItemNameUI == null) Debug.LogWarning("Held Item Name UI not found or has no Text component in " + scene.name);
 
             }
-            else
-            {
-                Debug.LogWarning("Cannot find Main Canvas to re-establish Held Item UI references.");
-            }
 
             BoatController playerMovement = FindObjectOfType<BoatController>();
             if (playerMovement != null)
             {
                 playerPivotTransform = playerMovement.GetCollectPivot();
-                if (playerPivotTransform == null)
-                {
-                    Debug.LogError("playerHandTransform is null even after getting from PlayerTapMovement.GetCollectPivot(). Check PlayerTapMovement script.");
-                }
-                else
-                {
-                    Debug.Log("playerHandTransform re-found in " + scene.name + " at: " + playerPivotTransform.position);
-                }
             }
             else
             {
-                Debug.LogWarning("PlayerTapMovement not found in " + scene.name + ". Cannot attach held item visual.");
                 playerPivotTransform = null;
             }
 
@@ -146,10 +122,6 @@ public class InventoryUI : MonoBehaviour
                     UpdateInventoryUI();
                     UpdateHeldItemVisual(InventoryManager.Instance.activeHandSlot.itemData);
                 }
-            }
-            else
-            {
-                Debug.LogError("Failed to establish ALL necessary UI references in " + scene.name + ". Inventory UI might not function correctly. (Panel: " + (inventoryPanel != null) + ", Slots: " + (slotsParent != null) + ", IconUI: " + (heldItemIconUI != null) + ", NameUI: " + (heldItemNameUI != null) + ", Pivot: " + (playerPivotTransform != null) + ")");
             }
         }
         else if (scene.name == "Main Menu")
@@ -183,11 +155,7 @@ public class InventoryUI : MonoBehaviour
 
     void GenerateInventorySlots()
     {
-        if (slotsParent == null)
-        {
-            Debug.LogError("Slots Parent is null! Cannot generate inventory slots.");
-            return;
-        }
+        if (slotsParent == null) return;
 
         foreach (Transform child in slotsParent)
         {
@@ -253,8 +221,6 @@ public class InventoryUI : MonoBehaviour
 
     private void DestroyHeldItemVisual()
     {
-        currentHeldItemVisual = null;
-
         if (heldItemIconUI != null) heldItemIconUI.gameObject.SetActive(false);
         if (heldItemNameUI != null) heldItemNameUI.text = "";
     }

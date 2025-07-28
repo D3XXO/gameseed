@@ -13,14 +13,11 @@ public class ItemData : ScriptableObject
 
     public ItemType itemType;
 
-    
     public int healAmount;
 }
 
 public enum ItemType
 {
-    Material,
-    Tool,
     Consumable,
-    Equipment
+    Fish
 }
