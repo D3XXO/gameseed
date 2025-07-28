@@ -34,6 +34,9 @@ public class Fishing : MonoBehaviour
     public float normalFOV = 60f;
     public float zoomSpeed = 2f;
 
+    [Header("Fish Data")]
+    public List<Fish> fishList;
+
     private BoatController boatMovement;
     private float randomDirectionChangeTimer = 0f;
     private float randomDirectionChangeInterval = 1.5f;
@@ -46,6 +49,8 @@ public class Fishing : MonoBehaviour
         {
             mainCamera = Camera.main;
         }
+
+        InitializeFishList();
     }
 
     void Update()
@@ -80,7 +85,6 @@ public class Fishing : MonoBehaviour
             }
         }
 
-        // Handle camera zoom
         HandleCameraZoom();
     }
 
@@ -108,9 +112,10 @@ public class Fishing : MonoBehaviour
         fishCaught = true;
         isFishing = false;
         fishingUI.SetActive(false);
-        Debug.Log("Fish caught!");
         
-        // Add fish and weight logic here
+        Fish caughtFish = fishList[Random.Range(0, fishList.Count)];
+        Debug.Log($"Fish caught: {caughtFish.fishName}, Weight: {caughtFish.weight}, Size: {caughtFish.size}");
+        
     }
 
     void HandleFishingProgress()
@@ -184,5 +189,17 @@ public class Fishing : MonoBehaviour
         {
             mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, normalFOV, Time.deltaTime * zoomSpeed);
         }
+    }
+
+    void InitializeFishList()
+    {
+        fishList = new List<Fish>
+        {
+            new Fish("Aleefish", 2.5f, 30f),
+            new Fish("Dafish", 5.0f, 60f),
+            new Fish("Hafeesh", 3.0f, 40f),
+            new Fish("Nyarvish", 7.0f, 80f),
+            new Fish("Absolish", 4.5f, 50f)
+        };
     }
 }
