@@ -11,24 +11,28 @@ public class Fishing : MonoBehaviour
     public bool fishCaught = false;
     public float fishingProgress = 0f;
     public float fishingDuration = 10f;
-    
+
     [Header("Balancing Bar")]
     public Image balanceBar;
     public float balancePosition = 0f;
     public float balanceTarget = 0f;
     public float balanceSpeed = 2f;
     public float balanceSensitivity = 0.5f;
-    
+
     [Header("Reeling Bar")]
     public Image reelBar;
     public float reelPower = 0f;
     public float reelGainSpeed = 1f;
     public float reelDecaySpeed = 0.5f;
     public float maxReelPower = 100f;
-    
+
     [Header("UI Elements")]
     public Image progressBar;
     public GameObject fishingUI;
+    public Camera mainCamera;
+    public float zoomedFOV = 30f;
+    public float normalFOV = 60f;
+    public float zoomSpeed = 2f;
 
     private BoatController boatMovement;
     private float randomDirectionChangeTimer = 0f;
@@ -38,11 +42,15 @@ public class Fishing : MonoBehaviour
     {
         boatMovement = GetComponent<BoatController>();
         fishingUI.SetActive(false);
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+        }
     }
 
     void Update()
     {
-        if (!isFishing && boatMovement != null && boatMovement.IsMoving() == false)
+        if (!isFishing && boatMovement != null && !boatMovement.IsMoving())
         {
             canFish = true;
         }
@@ -71,6 +79,9 @@ public class Fishing : MonoBehaviour
                 CatchFish();
             }
         }
+
+        // Handle camera zoom
+        HandleCameraZoom();
     }
 
     void StartFishing()
@@ -99,7 +110,7 @@ public class Fishing : MonoBehaviour
         fishingUI.SetActive(false);
         Debug.Log("Fish caught!");
         
-        // Tambahin ikan sama berat nanti disini gw malas
+        // Add fish and weight logic here
     }
 
     void HandleFishingProgress()
@@ -160,6 +171,18 @@ public class Fishing : MonoBehaviour
         if (reelBar != null)
         {
             reelBar.fillAmount = reelPower / maxReelPower;
+        }
+    }
+
+    void HandleCameraZoom()
+    {
+        if (isFishing)
+        {
+            mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, zoomedFOV, Time.deltaTime * zoomSpeed);
+        }
+        else
+        {
+            mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, normalFOV, Time.deltaTime * zoomSpeed);
         }
     }
 }
