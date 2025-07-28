@@ -9,8 +9,15 @@ public class Fishing : MonoBehaviour
     public bool canFish = false;
     public bool isFishing = false;
     public bool fishCaught = false;
+    public bool isThrowing = false; // New state for throwing
+    public bool fishBiteDetected = false; // New state for fish bite detection
     public float fishingProgress = 0f;
     public float fishingDuration = 10f;
+
+    [Header("Throwing Settings")]
+    public float throwDistance = 10f; // Distance the line can be thrown
+    public float throwPower = 0f; // Power based on how many times space is pressed
+    public float maxThrowPower = 5f; // Maximum power for throwing
 
     [Header("Balancing Bar")]
     public Image balanceBar;
@@ -37,6 +44,9 @@ public class Fishing : MonoBehaviour
     [Header("Fish Data")]
     public List<Fish> fishList;
 
+    [Header("Bite Indicator")]
+    public GameObject biteIndicator; // UI element to indicate a fish bite
+
     private BoatController boatMovement;
     private float randomDirectionChangeTimer = 0f;
     private float randomDirectionChangeInterval = 1.5f;
@@ -45,6 +55,7 @@ public class Fishing : MonoBehaviour
     {
         boatMovement = GetComponent<BoatController>();
         fishingUI.SetActive(false);
+        biteIndicator.SetActive(false); // Hide bite indicator initially
         if (mainCamera == null)
         {
             mainCamera = Camera.main;
@@ -62,15 +73,20 @@ public class Fishing : MonoBehaviour
         else if (boatMovement != null && boatMovement.IsMoving())
         {
             canFish = false;
-            if (isFishing)
+            if (isFishing || isThrowing)
             {
                 CancelFishing();
             }
         }
 
-        if (canFish && !isFishing && Input.GetKeyDown(KeyCode.F))
+        if (canFish && !isFishing && !isThrowing && Input.GetKeyDown(KeyCode.F))
         {
             StartFishing();
+        }
+
+        if (isThrowing)
+        {
+            HandleThrowing();
         }
 
         if (isFishing && !fishCaught)
@@ -85,25 +101,76 @@ public class Fishing : MonoBehaviour
             }
         }
 
+        if (fishBiteDetected)
+        {
+            // Wait for player to acknowledge the bite
+            if (Input.GetKeyDown(KeyCode.E)) // Press E to acknowledge the bite
+            {
+                fishBiteDetected = false; // Reset bite detection
+                fishingProgress = 0f; // Reset fishing progress
+                reelPower = 0f; // Reset reel power
+                balancePosition = 0f; // Reset balance position
+                biteIndicator.SetActive(false); // Hide bite indicator
+                Debug.Log("Fish is biting! Start reeling!");
+            }
+        }
+
         HandleCameraZoom();
     }
 
     void StartFishing()
     {
-        isFishing = true;
-        fishCaught = false;
-        fishingProgress = 0f;
-        reelPower = 0f;
-        balancePosition = 0f;
+        isThrowing = true; // Start throwing state
         fishingUI.SetActive(true);
-        
-        balanceTarget = Random.Range(-0.8f, 0.8f);
+        mainCamera.fieldOfView = zoomedFOV; // Zoom in when fishing starts
+        throwPower = 0f; // Reset throw power
+    }
+
+    void HandleThrowing()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            throwPower += 1f; // Increase throw power for each space press
+            throwPower = Mathf.Clamp(throwPower, 0f, maxThrowPower); // Clamp to max throw power
+        }
+
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            // Throw the line when space is released
+            isThrowing = false; // Exit throwing state
+            StartCoroutine(DetectFishBite()); // Start detecting fish bite
+            Debug.Log($"Line thrown with power: {throwPower}, Distance: {throwDistance}");
+
+            // Reset throw power for the next throw
+            throwPower = 0f;
+        }
+    }
+
+    IEnumerator DetectFishBite()
+    {
+        // Simulate a delay for fish to bite
+        yield return new WaitForSeconds(2f); // Wait for 2 seconds (you can adjust this)
+
+        // Random chance for a fish to bite
+        if (Random.value < 0.5f) // 50% chance to detect a bite
+        {
+            fishBiteDetected = true; // Set bite detected
+            biteIndicator.SetActive(true); // Show bite indicator
+            Debug.Log("A fish has bitten the bait!");
+        }
+        else
+        {
+            Debug.Log("No fish bite detected.");
+        }
     }
 
     void CancelFishing()
     {
         isFishing = false;
+        isThrowing = false; // Reset throwing state
         fishCaught = false;
+        fishBiteDetected = false; // Reset fish bite detection
+        biteIndicator.SetActive(false); // Hide bite indicator
         fishingUI.SetActive(false);
     }
 
@@ -115,7 +182,6 @@ public class Fishing : MonoBehaviour
         
         Fish caughtFish = fishList[Random.Range(0, fishList.Count)];
         Debug.Log($"Fish caught: {caughtFish.fishName}, Weight: {caughtFish.weight}, Size: {caughtFish.size}");
-        
     }
 
     void HandleFishingProgress()
