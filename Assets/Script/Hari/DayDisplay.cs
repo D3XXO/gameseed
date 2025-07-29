@@ -10,12 +10,12 @@ public class DayDisplay : MonoBehaviour
     private void Awake()
     {
         _worldTime.DayChanged += OnDayChanged;
-        _dayText.text = $"Day {_worldTime.CurrentDay}";
+        _dayText.text = $"Night {_worldTime.CurrentDay}";
     }
 
     private void OnDayChanged(object sender, int day)
     {
-        _dayText.text = $"Day {day}";
+        _dayText.text = $"Night {day}";
     }
 
     private void OnDestroy()
