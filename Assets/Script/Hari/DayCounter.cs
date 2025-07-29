@@ -1,17 +1,23 @@
 using UnityEngine;
 using TMPro;
+using WorldTime;
 
 namespace WorldTime
 {
     public class DayCounter : MonoBehaviour
     {
-        [SerializeField] private WorldTime _worldTime;
+        private WorldTime _worldTime;
         [SerializeField] private TMP_Text _dayText;
 
         private void Awake()
         {
-            _worldTime.DayChanged += OnDayChanged;
-            _dayText.text = $"Night {_worldTime.CurrentDay}";
+            _worldTime = WorldTime.Instance;
+
+            if (_worldTime != null)
+            {
+                _worldTime.DayChanged += OnDayChanged;
+                _dayText.text = $"Night {_worldTime.CurrentDay}";
+            }
         }
 
         private void OnDayChanged(object sender, int day)
@@ -21,7 +27,10 @@ namespace WorldTime
 
         private void OnDestroy()
         {
-            _worldTime.DayChanged -= OnDayChanged;
+            if (_worldTime != null)
+            {
+                _worldTime.DayChanged -= OnDayChanged;
+            }
         }
     }
 }

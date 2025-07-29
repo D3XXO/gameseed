@@ -1,19 +1,24 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 [System.Serializable]
 public class GameData
 {
+    public string lastGameplaySceneName;
     public float playerPositionX;
     public float playerPositionY;
     public float playerPositionZ;
-
-    public List<SerializableInventorySlot> inventorySlotsData;
-
-    public string lastGameplaySceneName;
-
     public int playerCurrentHP;
     public int playerMaxHP;
+    public double currentWorldTimeTotalMinutes;
+    public int currentWorldDay;
+    public List<SerializableInventorySlot> inventorySlotsData;
+
+    public bool useOverrideSpawnPosition;
+    public float overrideSpawnX;
+    public float overrideSpawnY;
+    public float overrideSpawnZ;
 
     public GameData()
     {
@@ -24,6 +29,9 @@ public class GameData
         lastGameplaySceneName = "Gameplay";
         playerCurrentHP = 3;
         playerMaxHP = 3;
+
+        currentWorldTimeTotalMinutes = new TimeSpan(21, 0, 0).TotalMinutes;
+        currentWorldDay = 1;
     }
 }
 

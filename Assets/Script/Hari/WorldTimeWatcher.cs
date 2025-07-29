@@ -9,19 +9,26 @@ namespace WorldTime
 {
     public class WorldTimeWatcher : MonoBehaviour
     {
-        [SerializeField]
         private WorldTime _worldtime;
         [SerializeField]
         private List<Schedule> _schedule;
 
         private void Start()
         {
-            _worldtime.WorldTimeChanged += CheckSchedule;
+            _worldtime = WorldTime.Instance;
+
+            if (_worldtime != null)
+            {
+                _worldtime.WorldTimeChanged += CheckSchedule;
+            }
         }
 
         private void OnDestroy()
         {
-            _worldtime.WorldTimeChanged -= CheckSchedule;
+            if (_worldtime != null)
+            {
+                _worldtime.WorldTimeChanged -= CheckSchedule;
+            }
         }
 
         private void CheckSchedule(object sender, TimeSpan newTime)

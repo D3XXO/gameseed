@@ -4,13 +4,18 @@ using WorldTime;
 
 public class DayDisplay : MonoBehaviour
 {
-    [SerializeField] private WorldTime.WorldTime _worldTime;
+    private WorldTime.WorldTime _worldTime;
     [SerializeField] private TMP_Text _dayText;
 
     private void Awake()
     {
-        _worldTime.DayChanged += OnDayChanged;
-        _dayText.text = $"Night {_worldTime.CurrentDay}";
+        _worldTime = WorldTime.WorldTime.Instance;
+
+        if (_worldTime != null)
+        {
+            _worldTime.DayChanged += OnDayChanged;
+            _dayText.text = $"Night {_worldTime.CurrentDay}";
+        }
     }
 
     private void OnDayChanged(object sender, int day)
@@ -20,6 +25,9 @@ public class DayDisplay : MonoBehaviour
 
     private void OnDestroy()
     {
-        _worldTime.DayChanged -= OnDayChanged;
+        if (_worldTime != null)
+        {
+            _worldTime.DayChanged -= OnDayChanged;
+        }
     }
 }

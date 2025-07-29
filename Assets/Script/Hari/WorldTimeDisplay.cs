@@ -7,22 +7,30 @@ using System;
 namespace WorldTime
 {
     [RequireComponent(typeof(TMP_Text))]
-    
+
     public class WorldTimeDisplay : MonoBehaviour
     {
-        [SerializeField]
         private WorldTime _worldtime;
         private TMP_Text _text;
 
         private void Awake()
         {
             _text = GetComponent<TMP_Text>();
-            _worldtime.WorldTimeChanged += OnWorldTimeChanged;
+
+            _worldtime = WorldTime.Instance;
+
+            if (_worldtime != null)
+            {
+                _worldtime.WorldTimeChanged += OnWorldTimeChanged;
+            }
         }
 
         private void OnDestroy()
         {
-            _worldtime.WorldTimeChanged -= OnWorldTimeChanged;
+            if (_worldtime != null)
+            {
+                _worldtime.WorldTimeChanged -= OnWorldTimeChanged;
+            }
         }
 
         private void OnWorldTimeChanged(object sender, TimeSpan newTime)

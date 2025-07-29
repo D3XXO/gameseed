@@ -3,6 +3,7 @@ using UnityEngine.EventSystems;
 using System;
 using System.Collections;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
 
 public class BoatController : MonoBehaviour
 {
@@ -18,10 +19,8 @@ public class BoatController : MonoBehaviour
 
     [Header("Movement")]
     public float moveSpeed;
-    public float rotationSpeed;
     public float gridSize;
-    private float verticalInput;
-    private float horizontalInput;
+    private Vector2 inputDirection;
     private bool _isMoving = false;
     private bool movementEnabled = true;
     public Transform collectPivot;
@@ -43,8 +42,18 @@ public class BoatController : MonoBehaviour
     public Light2D boatLight;
     private bool isLightOn = false;
 
+    private Vector2 isoUp;
+    private Vector2 isoRight;
+    private Vector2 isoDown;
+    private Vector2 isoLeft;
+
     void Start()
     {
+        isoUp = new Vector2(Mathf.Sin(Mathf.PI / 6), Mathf.Cos(Mathf.PI / 6)).normalized;
+        isoRight = new Vector2(Mathf.Cos(Mathf.PI / 6), -Mathf.Sin(Mathf.PI / 6)).normalized;
+        isoDown = -isoUp;
+        isoLeft = -isoRight;
+
         rb = GetComponent<Rigidbody2D>();
         if (rb == null)
         {
@@ -82,7 +91,6 @@ public class BoatController : MonoBehaviour
             boatLight.enabled = false;
         }
 
-        currentHP = maxHP;
         OnHealthChanged?.Invoke(currentHP, maxHP);
     }
 
@@ -94,31 +102,43 @@ public class BoatController : MonoBehaviour
 
     void FixedUpdate()
     {
-        MoveAndRotateBoat();
+        MoveBoat();
     }
 
     void HandleInput()
     {
-        verticalInput = Input.GetAxisRaw("Vertical");
-        if (verticalInput < 0) verticalInput = 0;
+        // Reset input
+        inputDirection = Vector2.zero;
 
-        horizontalInput = Input.GetAxisRaw("Horizontal");
-        _isMoving = Mathf.Abs(verticalInput) > 0.01f;
+        // Get raw input
+        float horizontal = Input.GetAxisRaw("Horizontal");
+        float vertical = Input.GetAxisRaw("Vertical");
+
+        // Convert to isometric directions
+        if (vertical > 0) inputDirection += isoUp;
+        if (vertical < 0) inputDirection += isoDown;
+        if (horizontal > 0) inputDirection += isoRight;
+        if (horizontal < 0) inputDirection += isoLeft;
+
+        // Normalize if diagonal
+        if (inputDirection.magnitude > 0)
+        {
+            inputDirection.Normalize();
+            _isMoving = true;
+        }
+        else
+        {
+            _isMoving = false;
+        }
     }
 
-    void MoveAndRotateBoat()
+    void MoveBoat()
     {
         if (isKnockedBack || !movementEnabled) return;
 
-        if (horizontalInput != 0)
-        {
-            float rotation = -horizontalInput * rotationSpeed * Time.fixedDeltaTime;
-            rb.MoveRotation(rb.rotation + rotation);
-        }
-
         if (_isMoving)
         {
-            Vector2 movement = transform.up * verticalInput * currentSpeed * Time.fixedDeltaTime;
+            Vector2 movement = inputDirection * currentSpeed * Time.fixedDeltaTime;
             rb.MovePosition(rb.position + movement);
         }
     }
@@ -189,6 +209,13 @@ public class BoatController : MonoBehaviour
         return collectPivot;
     }
 
+    public void SetHealth(int current, int max)
+    {
+        currentHP = Mathf.Clamp(current, 0, max);
+        maxHP = max;
+        OnHealthChanged?.Invoke(currentHP, maxHP);
+    }
+
     public void Heal(int amount)
     {
         if (currentHP < maxHP)
@@ -209,11 +236,12 @@ public class BoatController : MonoBehaviour
             {
                 FlashRed();
             }
+
             ApplyLightningSlowdown();
 
             if (currentHP <= 0)
             {
-                Destroy(gameObject);
+                SceneManager.LoadScene("Harbour");
             }
         }
     }

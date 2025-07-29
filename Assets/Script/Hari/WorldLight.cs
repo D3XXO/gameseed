@@ -11,7 +11,6 @@ namespace WorldTime
     {
         private Light2D _light;
 
-        [SerializeField]
         private WorldTime _worldtime;
 
         [SerializeField]
@@ -20,12 +19,21 @@ namespace WorldTime
         private void Awake()
         {
             _light = GetComponent<Light2D>();
-            _worldtime.WorldTimeChanged += OnWorldTimeChanged;
+
+            _worldtime = WorldTime.Instance;
+
+            if (_worldtime != null)
+            {
+                _worldtime.WorldTimeChanged += OnWorldTimeChanged;
+            }
         }
 
         private void OnDestroy()
         {
-            _worldtime.WorldTimeChanged -= OnWorldTimeChanged;
+            if (_worldtime != null)
+            {
+                _worldtime.WorldTimeChanged -= OnWorldTimeChanged;
+            }
         }
         private void OnWorldTimeChanged(object sender, TimeSpan newTime)
         {
