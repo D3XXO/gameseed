@@ -20,3 +20,5 @@ MonoBehaviour:
   maxStackSize: 99
   itemType: 1
   healAmount: 0
+  sellPrice: 100
+  canBeSold: 1

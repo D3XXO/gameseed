@@ -6,14 +6,28 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
 {
     public Image itemIcon;
     public Text itemAmountText;
+    public Image selectionBorder;
 
-    private InventorySlot assignedSlot;
+    [HideInInspector]
+    public InventorySlot assignedSlot;
     private int slotIndex;
+
+    [Header("Selling")]
+    public Image sellOverlay;
+    private bool isSellMode;
+    private int sellAmount;
+
+    void Awake()
+    {
+        if (selectionBorder != null) selectionBorder.enabled = false;
+    }
 
     public void Init(InventorySlot slot, int index)
     {
         assignedSlot = slot;
         slotIndex = index;
+
+        if (selectionBorder != null) selectionBorder.enabled = false;
         UpdateSlotUI();
     }
 
@@ -23,35 +37,55 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
         {
             itemIcon.gameObject.SetActive(false);
             itemAmountText.text = "";
+            ResetSelection();
         }
         else
         {
             itemIcon.gameObject.SetActive(true);
             itemIcon.sprite = assignedSlot.itemData.icon;
-            itemAmountText.text = assignedSlot.amount.ToString();
-
-            if (!assignedSlot.itemData.isStackable || assignedSlot.amount <= 1)
-            {
-                itemAmountText.text = "";
-            }
+            itemAmountText.text = assignedSlot.amount > 1 ? assignedSlot.amount.ToString() : "";
         }
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (assignedSlot == null || assignedSlot.IsEmpty())
-        {
-            InventoryManager.Instance.ClearActiveHandItem();
-            return;
-        }
-
         if (eventData.button == PointerEventData.InputButton.Left)
         {
-            InventoryManager.Instance.SetActiveHandItem(slotIndex);
+            InventoryUI.Instance.OnInventorySlotClicked(this, assignedSlot);
         }
-        else if (eventData.button == PointerEventData.InputButton.Right)
+
+        if(isSellMode && eventData.button == PointerEventData.InputButton.Left)
         {
-            InventoryManager.Instance.UseItem(assignedSlot.itemData);
+            ToggleItemForSale();
         }
+    }
+
+    public void SetAsSellSlot()
+    {
+        isSellMode = true;
+    }
+
+    private void ToggleItemForSale()
+    {
+        if(assignedSlot.IsEmpty()) return;
+        
+        if(sellAmount < assignedSlot.amount)
+        {
+            sellAmount++;
+            sellOverlay.gameObject.SetActive(true);
+            sellOverlay.GetComponentInChildren<Text>().text = sellAmount.ToString();
+            MarketUI.Instance.AddToSellTotal(assignedSlot.itemData.sellPrice);
+        }
+        else
+        {
+            sellAmount = 0;
+            sellOverlay.gameObject.SetActive(false);
+            MarketUI.Instance.AddToSellTotal(-assignedSlot.itemData.sellPrice * assignedSlot.amount);
+        }
+    }
+
+    public void ResetSelection()
+    {
+        if (selectionBorder != null) selectionBorder.enabled = false;
     }
 }

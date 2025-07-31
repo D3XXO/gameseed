@@ -14,6 +14,10 @@ public class ItemData : ScriptableObject
     public ItemType itemType;
 
     public int healAmount;
+
+    [Header("Selling")]
+    public int sellPrice;
+    public bool canBeSold = true;
 }
 
 public enum ItemType

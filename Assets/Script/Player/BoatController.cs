@@ -92,12 +92,27 @@ public class BoatController : MonoBehaviour
         }
 
         OnHealthChanged?.Invoke(currentHP, maxHP);
+
+        if (SaveLoadManager.Instance != null)
+        {
+            GameData data = SaveLoadManager.Instance.LoadGame();
+            string currentScene = SceneManager.GetActiveScene().name;
+
+            if (SaveLoadManager.Instance != null &&
+            Array.Exists(SaveLoadManager.Instance.GameplayScenes,
+            scene => scene == currentScene && scene != "Harbour"))
+            {
+                data.lastGameplaySceneName = currentScene;
+                SaveLoadManager.Instance.SaveGame(data);
+            }
+        }
     }
 
     void Update()
     {
         HandleInput();
         HandleLightingInput();
+        HandleInventoryInput();
     }
 
     void FixedUpdate()
@@ -107,20 +122,16 @@ public class BoatController : MonoBehaviour
 
     void HandleInput()
     {
-        // Reset input
         inputDirection = Vector2.zero;
 
-        // Get raw input
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
 
-        // Convert to isometric directions
         if (vertical > 0) inputDirection += isoUp;
         if (vertical < 0) inputDirection += isoDown;
         if (horizontal > 0) inputDirection += isoRight;
         if (horizontal < 0) inputDirection += isoLeft;
 
-        // Normalize if diagonal
         if (inputDirection.magnitude > 0)
         {
             inputDirection.Normalize();
@@ -304,6 +315,16 @@ public class BoatController : MonoBehaviour
     public void FlashRed()
     {
         StartCoroutine(FlashRoutine());
+    }
+
+    void HandleInventoryInput()
+    {
+        if (SceneManager.GetActiveScene().name == "Harbour") return;
+
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            InventoryUI.Instance.ToggleInventory();
+        }
     }
 
     IEnumerator FlashRoutine()

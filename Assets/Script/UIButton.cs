@@ -11,15 +11,20 @@ public class UIButton : MonoBehaviour
     [Header("Confirmation UI")]
     public GameObject confirmationCanvas;
 
-    public GameObject pauseMenuUI;
+    private GameObject pauseMenuUI;
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
 
     private void Start()
     {
-        if (pauseMenuUI != null)
-        {
-            pauseMenuUI.SetActive(false);
-        }
-
         if (ItemDatabase.Instance == null)
         {
             ItemDatabase masterDb = Resources.Load<ItemDatabase>("MasterItemDatabase");
@@ -29,24 +34,76 @@ public class UIButton : MonoBehaviour
             }
         }
 
-        if (SceneManager.GetActiveScene().name == "Main Menu")
-        {
-            InitializeMainMenuButtons();
-            if (confirmationCanvas != null)
-            {
-                confirmationCanvas.SetActive(false);
-            }
-        }
+        OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
     }
 
     private void Update()
     {
-        if (SceneManager.GetActiveScene().name != "Main Menu" && Time.timeScale > 0.1f && Input.GetKeyDown(KeyCode.Escape))
+        if (SceneManager.GetActiveScene().name != "Main Menu" && pauseMenuUI != null && Input.GetKeyDown(KeyCode.Escape))
         {
-            PauseGame();
+            // Toggle pause menu
+            if (pauseMenuUI.activeSelf)
+            {
+                ResumeGame();
+            }
+            else
+            {
+                PauseGame();
+            }
         }
+    }
 
-        TryFindMissingReferences();
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        Canvas mainCanvas = FindObjectOfType<Canvas>();
+        if (scene.name == "Main Menu")
+        {
+            if (mainCanvas != null)
+            {
+                Transform canvasRoot = mainCanvas.transform;
+
+                Transform newGameBtnObj = canvasRoot.Find("New Game");
+                if (newGameBtnObj != null)
+                    newGameButton = newGameBtnObj.GetComponent<Button>();
+
+                Transform loadGameBtnObj = canvasRoot.Find("Load Game");
+                if (loadGameBtnObj != null)
+                    loadGameButton = loadGameBtnObj.GetComponent<Button>();
+
+                Transform confirmationObj = canvasRoot.Find("Confirmation Canvas");
+                if (confirmationObj != null)
+                    confirmationCanvas = confirmationObj.gameObject;
+            }
+
+            if (newGameButton != null || loadGameButton != null)
+            {
+                InitializeMainMenuButtons();
+            }
+
+            if (confirmationCanvas != null)
+            {
+                confirmationCanvas.SetActive(false);
+            }
+
+            pauseMenuUI = null;
+        }
+        else
+        {
+            if (mainCanvas != null)
+            {
+                Transform canvasRoot = mainCanvas.transform;
+                Transform pauseObj = canvasRoot.Find("PauseCanvas");
+                if (pauseObj != null)
+                {
+                    pauseMenuUI = pauseObj.gameObject;
+                    pauseMenuUI.SetActive(false);
+                }
+            }
+
+            newGameButton = null;
+            loadGameButton = null;
+            confirmationCanvas = null;
+        }
     }
 
     void InitializeMainMenuButtons()
@@ -104,12 +161,9 @@ public class UIButton : MonoBehaviour
     public void LoadExistingGame()
     {
         GameData loadedData = SaveLoadManager.Instance.LoadGame();
-
         string sceneToLoad = string.IsNullOrEmpty(loadedData.lastGameplaySceneName) ? "Gameplay" : loadedData.lastGameplaySceneName;
-
         SceneManager.sceneLoaded -= OnGameplaySceneLoadedAndApplyData;
         SceneManager.sceneLoaded += OnGameplaySceneLoadedAndApplyData;
-
         SceneManager.LoadScene(sceneToLoad);
         Time.timeScale = 1f;
     }
@@ -117,7 +171,6 @@ public class UIButton : MonoBehaviour
     private void OnGameplaySceneLoadedAndApplyData(Scene scene, LoadSceneMode mode)
     {
         string[] gameplayScenes = { "Gameplay", "Harbour" };
-
         bool isGameplayScene = false;
         foreach (string sceneName in gameplayScenes)
         {
@@ -127,16 +180,13 @@ public class UIButton : MonoBehaviour
                 break;
             }
         }
-
         if (isGameplayScene)
         {
             GameData dataToApply = SaveLoadManager.Instance.LoadGame();
             SaveLoadManager.Instance.ApplyGameData(dataToApply);
         }
-
         SceneManager.sceneLoaded -= OnGameplaySceneLoadedAndApplyData;
     }
-
 
     public void QuitGame()
     {
@@ -144,12 +194,10 @@ public class UIButton : MonoBehaviour
         {
             SaveLoadManager.Instance.SaveGame(SaveLoadManager.Instance.GatherGameData());
         }
-
         Application.Quit();
-
-#if UNITY_EDITOR
+        #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
-#endif
+        #endif
     }
 
     public void ResumeGame()
@@ -174,46 +222,17 @@ public class UIButton : MonoBehaviour
     {
         if (SaveLoadManager.Instance != null)
         {
-            SaveLoadManager.Instance.SaveGame(SaveLoadManager.Instance.GatherGameData());
+            GameData currentData = SaveLoadManager.Instance.GatherGameData();
+
+            if (SceneManager.GetActiveScene().name == "Harbour")
+            {
+                currentData.lastGameplaySceneName = "Harbour";
+            }
+
+            SaveLoadManager.Instance.SaveGame(currentData);
         }
 
         Time.timeScale = 1f;
         SceneManager.LoadScene("Main Menu");
-    }
-
-    void TryFindMissingReferences()
-    {
-        if (newGameButton == null)
-        {
-            GameObject newGameBtnObj = GameObject.Find("New Game");
-            if (newGameBtnObj != null)
-                newGameButton = newGameBtnObj.GetComponent<Button>();
-        }
-
-        if (loadGameButton == null)
-        {
-            GameObject loadGameBtnObj = GameObject.Find("Load Game");
-            if (loadGameBtnObj != null)
-                loadGameButton = loadGameBtnObj.GetComponent<Button>();
-        }
-
-        if (confirmationCanvas == null)
-        {
-            confirmationCanvas = GameObject.Find("Confirmation Canvas");
-            if (confirmationCanvas != null)
-                confirmationCanvas.SetActive(false); // ⬅️ Nonaktifkan setelah ditemukan
-        }
-
-        if (pauseMenuUI == null)
-        {
-            pauseMenuUI = GameObject.Find("PauseCanvas");
-            if (pauseMenuUI != null)
-                pauseMenuUI.SetActive(false); // ⬅️ Nonaktifkan setelah ditemukan
-        }
-
-        if (SceneManager.GetActiveScene().name == "Main Menu" && newGameButton != null && loadGameButton != null)
-        {
-            InitializeMainMenuButtons();
-        }
     }
 }

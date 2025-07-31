@@ -327,8 +327,6 @@ MonoBehaviour:
   inventoryPanel: {fileID: 0}
   slotsParent: {fileID: 0}
   inventorySlotUIPrefab: {fileID: 2067370502715945438, guid: e75007491a49d20469d081af272dcea6, type: 3}
-  heldItemIconUI: {fileID: 0}
-  heldItemNameUI: {fileID: 0}
   playerPivotTransform: {fileID: 0}
 --- !u!4 &279848254
 Transform:
@@ -374,6 +372,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 972fa853a59494642a7df06430e2d2a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _gameplayScenes:
+  - Gameplay
+  - Harbour
 --- !u!4 &450058554
 Transform:
   m_ObjectHideFlags: 0
@@ -705,7 +706,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6992e73d14262dd448b8044abc8fb9ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _daylength: 10
+  _daylength: 600
+  fadeDuration: 2
 --- !u!4 &597723261
 Transform:
   m_ObjectHideFlags: 0
@@ -2351,7 +2353,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1791117413}
   - component: {fileID: 1791117412}
-  - component: {fileID: 1791117414}
   m_Layer: 0
   m_Name: UI Button
   m_TagString: Untagged
@@ -2374,7 +2375,6 @@ MonoBehaviour:
   newGameButton: {fileID: 1485424801}
   loadGameButton: {fileID: 946092701}
   confirmationCanvas: {fileID: 1749740907}
-  pauseMenuUI: {fileID: 0}
 --- !u!4 &1791117413
 Transform:
   m_ObjectHideFlags: 0
@@ -2390,23 +2390,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1791117414
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1791117411}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 88831f0d594306b4d979475bbe993491, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  returnHomeCanvasName: ReturnHomeNotificationCanvas
-  goHomeButtonName: GoHomeButton
-  stayButtonName: StayButton
-  bigWavePrefab: {fileID: 5191248770182882436, guid: c74b0c6f3b6570b4c87fe3a70f5ec3f9, type: 3}
-  playerTag: Player
 --- !u!1 &1795028769
 GameObject:
   m_ObjectHideFlags: 0

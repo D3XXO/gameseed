@@ -11,7 +11,8 @@ public class SaveLoadManager : MonoBehaviour
 
     private string savePath;
 
-    private string[] gameplayScenes = {"Gameplay", "Harbour"};
+    [SerializeField] private string[] _gameplayScenes = {"Gameplay", "Harbour"};
+    public string[] GameplayScenes => _gameplayScenes;
 
     void Awake()
     {
@@ -90,7 +91,7 @@ public class SaveLoadManager : MonoBehaviour
 
         string currentScene = SceneManager.GetActiveScene().name;
         bool isCurrentSceneGameplay = false;
-        foreach (string sceneName in gameplayScenes)
+        foreach (string sceneName in GameplayScenes)
         {
             if (currentScene == sceneName)
             {
@@ -112,6 +113,11 @@ public class SaveLoadManager : MonoBehaviour
 
                 dataToSave.playerCurrentHP = boat.currentHP;
                 dataToSave.playerMaxHP = boat.maxHP;
+
+                if (currentScene != "Harbour")
+                {
+                    dataToSave.lastGameplaySceneName = currentScene;
+                }
             }
             else
             {
