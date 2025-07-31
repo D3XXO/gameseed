@@ -7,7 +7,7 @@ using UnityEngine.UI;
 [System.Serializable]
 public class Fish
 {
-    public string fishName;       // Name of the fish
+    public string fishName;      // Name of the fish
     public float weight;          // Weight of the fish
     public float size;            // Size of the fish
     public ItemData itemData;     // Associated inventory item data
@@ -41,11 +41,17 @@ public class Fishing : MonoBehaviour
     public float maxThrowPower;               // Max throw power
     public float throwPowerCycleSpeed;        // Speed of power meter cycling
     private int throwPowerDirection;          // Direction power meter is moving (1 or -1)
+    // ADDED: Variables for the new throw target mechanic
+    public RectTransform throwFishIndicator;  // UI for the fish target on the throw bar
+    public float throwFishSpeed = 0.5f;       // Speed of the moving fish target
+    private float throwFishPosition;          // Normalized position of the fish target (0-1)
+    private int throwFishDirection;           // Movement direction of fish target
+    private float throwAccuracy;              // Stores accuracy of the throw (0-1)
 
     [Header("Balancing Bar")]
     public RectTransform balancePlayerIndicator;  // UI element for player position
     public RectTransform balanceTargetIndicator; // UI element for target position
-    public float balancePosition;              // Current player balance position (-1 to 1)
+    public float balancePosition;             // Current player balance position (-1 to 1)
     public float balanceTarget;               // Target balance position (-1 to 1)
     public float balanceSpeed;                // Speed of balance movement
     public float balanceSensitivity;          // Sensitivity to player input
@@ -65,13 +71,24 @@ public class Fishing : MonoBehaviour
     public float maxLineTension;              // Max line tension before break
     public float currentLineTension;          // Current line tension
 
+    // ADDED: Header and variables for the reel-to-balance interaction
+    [Header("Reel-Balance Interaction")]
+    public float weakReelThreshold = 0.2f;    // Normalized power threshold for "too weak"
+    public float strongReelThreshold = 0.8f;  // Normalized power threshold for "too strong"
+    public float reelBalanceInfluenceDelay = 2.0f; // Time until weak/strong reel affects balance
+    public float reelBalanceInfluenceStrength = 0.5f; // How much it affects balance
+    public float prolongedInfluenceDelay = 5.0f; // Time for the "heavy" effect
+    public float prolongedInfluenceMultiplier = 2.0f; // Multiplier for the "heavy" effect
+    private float timeHeldTooWeak = 0f;       // Timer for holding reel power too low
+    private float timeHeldTooStrong = 0f;     // Timer for holding reel power too high
+
     [Header("UI Elements")]
     public Image progressBar;                 // Progress bar UI
     public GameObject fishingUI;              // Main fishing UI panel
     public Camera mainCamera;                 // Reference to main camera
     public float zoomedSize;                  // Camera size when fishing
     public float normalSize;                  // Normal camera size
-    public float zoomSpeed;                  // Camera zoom speed
+    public float zoomSpeed;                   // Camera zoom speed
     public Image reelBarBackground;           // Reel bar background
     public Image balanceBarBackground;        // Balance bar background
     public Text tensionText;                  // Text showing line tension
@@ -105,6 +122,9 @@ public class Fishing : MonoBehaviour
         if (fishingUI != null) fishingUI.SetActive(false);
         if (biteIndicator != null) biteIndicator.SetActive(false);
         if (tensionText != null) tensionText.text = "";
+        // ADDED: Ensure throw fish indicator is also hidden on start
+        if (throwFishIndicator != null) throwFishIndicator.gameObject.SetActive(false);
+
 
         if (mainCamera == null) mainCamera = Camera.main;
 
@@ -195,12 +215,18 @@ public class Fishing : MonoBehaviour
 
         // Activate UI elements for throwing
         if (fishingUI != null) fishingUI.SetActive(true);
+        // MODIFIED: Start player and fish indicators at 0
         throwPower = 0f;
         throwPowerDirection = 1;
+        throwFishPosition = 0f;
+        throwFishDirection = 1;
 
         // Set up UI visibility
         if (reelBarBackground != null) reelBarBackground.gameObject.SetActive(true);
         if (reelIndicator != null) reelIndicator.gameObject.SetActive(true);
+        // ADDED: Show the fish target indicator for throwing
+        if (throwFishIndicator != null) throwFishIndicator.gameObject.SetActive(true);
+
         if (balanceBarBackground != null) balanceBarBackground.gameObject.SetActive(false);
         if (balancePlayerIndicator != null) balancePlayerIndicator.gameObject.SetActive(false);
         if (balanceTargetIndicator != null) balanceTargetIndicator.gameObject.SetActive(false);
@@ -216,15 +242,10 @@ public class Fishing : MonoBehaviour
     {
         // Cycle throw power between 0 and max
         throwPower += throwPowerDirection * throwPowerCycleSpeed * Time.deltaTime;
-        if (throwPower >= maxThrowPower)
+        throwPower = Mathf.Clamp(throwPower, 0f, maxThrowPower);
+        if (throwPower >= maxThrowPower || throwPower <= 0f)
         {
-            throwPower = maxThrowPower;
-            throwPowerDirection = -1;
-        }
-        else if (throwPower <= 0f)
-        {
-            throwPower = 0f;
-            throwPowerDirection = 1;
+            throwPowerDirection *= -1;
         }
 
         // Update throw power UI
@@ -233,10 +254,33 @@ public class Fishing : MonoBehaviour
             reelIndicator.fillAmount = throwPower / maxThrowPower;
         }
 
+        // ADDED: Move the fish target indicator randomly on the bar
+        throwFishPosition += throwFishDirection * throwFishSpeed * Time.deltaTime;
+        throwFishPosition = Mathf.Clamp01(throwFishPosition);
+        if (throwFishPosition >= 1f || throwFishPosition <= 0f)
+        {
+            throwFishDirection *= -1;
+        }
+
+        // ADDED: Update the visual position of the fish target indicator
+        if (throwFishIndicator != null)
+        {
+            float fishIndicatorX = Mathf.Lerp(-reelBarVisualRange / 2f, reelBarVisualRange / 2f, throwFishPosition);
+            throwFishIndicator.anchoredPosition = new Vector2(fishIndicatorX, throwFishIndicator.anchoredPosition.y);
+        }
+
+
         // Handle throw release
         if (Input.GetKeyUp(KeyCode.Space))
         {
             isThrowing = false;
+            // ADDED: Hide the fish throw indicator after throwing
+            if (throwFishIndicator != null) throwFishIndicator.gameObject.SetActive(false);
+
+            // ADDED: Calculate throw accuracy based on alignment with fish target
+            float playerPowerNormalized = throwPower / maxThrowPower;
+            throwAccuracy = 1f - Mathf.Abs(playerPowerNormalized - throwFishPosition);
+            throwAccuracy = Mathf.Clamp01(throwAccuracy);
 
             // Show all fishing UI elements
             if (reelBarBackground != null) reelBarBackground.gameObject.SetActive(true);
@@ -246,10 +290,10 @@ public class Fishing : MonoBehaviour
             if (balanceTargetIndicator != null) balanceTargetIndicator.gameObject.SetActive(true);
             if (progressBar != null) progressBar.gameObject.SetActive(true);
 
-            // Check if throw was too weak
-            if (throwPower <= 0.1f)
+            // MODIFIED: Check accuracy instead of raw power
+            if (throwAccuracy < 0.1f)
             {
-                Debug.Log("Throw too weak.");
+                Debug.Log("Bad throw. Missed the target.");
                 CancelFishing();
                 return;
             }
@@ -277,12 +321,12 @@ public class Fishing : MonoBehaviour
             lineRenderer.SetPosition(1, end);
         }
 
-        // Calculate bite delay based on throw power
-        float biteDelay = Mathf.Clamp(throwDistance / (throwPower + 1f), 0.5f, 5f);
+        // MODIFIED: Calculate bite delay based on throw accuracy (better accuracy = faster bite)
+        float biteDelay = 1f + (1f - throwAccuracy) * 4f; // Perfect throw waits 1s, worst waits 5s
         yield return new WaitForSeconds(biteDelay);
 
-        // Calculate bite chance (higher with better throws)
-        float biteChance = 0.5f + (throwPower / maxThrowPower * 0.3f);
+        // MODIFIED: Calculate bite chance based on throw accuracy
+        float biteChance = throwAccuracy * 0.9f; // Max 90% chance of bite on a perfect throw
         if (Random.value < biteChance)
         {
             // Fish bit - wait for player to reel
@@ -333,6 +377,11 @@ public class Fishing : MonoBehaviour
         balanceTarget = Random.Range(balanceRandomTargetMin, balanceRandomTargetMax);
         currentLineTension = maxLineTension / 2f;
 
+        // ADDED: Reset reel-balance interaction timers
+        timeHeldTooWeak = 0f;
+        timeHeldTooStrong = 0f;
+
+
         if (biteIndicator != null) biteIndicator.SetActive(false);
 
         Debug.Log($"Fishing started! Target: {currentFish.fishName}");
@@ -346,6 +395,10 @@ public class Fishing : MonoBehaviour
         fishCaught = false;
         fishBiteDetected = false;
         waitingToReel = false;
+
+        // ADDED: Reset timers on cancel as well
+        timeHeldTooWeak = 0f;
+        timeHeldTooStrong = 0f;
 
         ResetUIElements();
 
@@ -461,6 +514,24 @@ public class Fishing : MonoBehaviour
         // Update and clamp line tension
         currentLineTension += tensionChange;
         currentLineTension = Mathf.Clamp(currentLineTension, 0f, maxLineTension);
+
+        // ADDED: Logic for tracking time held in weak/strong zones
+        if (powerNormalized < weakReelThreshold)
+        {
+            timeHeldTooWeak += Time.deltaTime;
+            timeHeldTooStrong = 0f; // Reset other timer
+        }
+        else if (powerNormalized > strongReelThreshold)
+        {
+            timeHeldTooStrong += Time.deltaTime;
+            timeHeldTooWeak = 0f; // Reset other timer
+        }
+        else
+        {
+            // If in the safe zone, reset both timers
+            timeHeldTooWeak = 0f;
+            timeHeldTooStrong = 0f;
+        }
     }
 
     // Handle balance bar mechanics
@@ -484,7 +555,31 @@ public class Fishing : MonoBehaviour
 
         // Add random fish influence based on fish strength
         float fishInfluence = (Random.value * 2f - 1f) * currentFish.strength * 0.1f * Time.deltaTime;
-        balancePosition += input * Time.deltaTime * balanceSpeed + fishInfluence;
+        
+        // MODIFIED: Added reel influence to the balance calculation
+        float reelInfluence = 0f;
+        if (timeHeldTooWeak > reelBalanceInfluenceDelay)
+        {
+            float currentInfluence = -reelBalanceInfluenceStrength;
+            // Apply "heavy" multiplier if held for too long
+            if (timeHeldTooWeak > prolongedInfluenceDelay)
+            {
+                currentInfluence *= prolongedInfluenceMultiplier;
+            }
+            reelInfluence = currentInfluence;
+        }
+        else if (timeHeldTooStrong > reelBalanceInfluenceDelay)
+        {
+            float currentInfluence = reelBalanceInfluenceStrength;
+            // Apply "heavy" multiplier if held for too long
+            if (timeHeldTooStrong > prolongedInfluenceDelay)
+            {
+                currentInfluence *= prolongedInfluenceMultiplier;
+            }
+            reelInfluence = currentInfluence;
+        }
+        
+        balancePosition += (input * balanceSpeed + reelInfluence) * Time.deltaTime + fishInfluence;
         balancePosition = Mathf.Clamp(balancePosition, -1f, 1f);
 
         // Update balance bar UI indicators
@@ -531,6 +626,9 @@ public class Fishing : MonoBehaviour
         if (fishingUI != null) fishingUI.SetActive(false);
         if (biteIndicator != null) biteIndicator.SetActive(false);
         if (tensionText != null) tensionText.text = "";
+        
+        // ADDED: Ensure throw fish indicator is hidden on reset
+        if (throwFishIndicator != null) throwFishIndicator.gameObject.SetActive(false);
 
         // Hide all fishing UI elements
         if (reelBarBackground != null) reelBarBackground.gameObject.SetActive(false);
