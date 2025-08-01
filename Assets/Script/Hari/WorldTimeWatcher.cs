@@ -47,6 +47,7 @@ namespace WorldTime
             public int hour;
             public int minute;
             public UnityEvent _action;
+            public bool isDisasterEvent;
         }
     }
 }

@@ -1,10 +1,8 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 
 public class ThunderAttack : MonoBehaviour
 {
-    [Header("Attack Settings")]
-    public float activeDuration = 4f;
     public float knockbackForce = 5f;
     public int damage = 3;
 
@@ -15,7 +13,7 @@ public class ThunderAttack : MonoBehaviour
 
     private IEnumerator DestroyAfterDelay()
     {
-        yield return new WaitForSeconds(activeDuration);
+        yield return new WaitForSeconds(4f); // Duration now controlled by DisasterManager
         Destroy(gameObject);
     }
 
