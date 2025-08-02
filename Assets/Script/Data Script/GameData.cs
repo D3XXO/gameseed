@@ -13,7 +13,13 @@ public class GameData
     public int playerMaxHP;
     public double currentWorldTimeTotalMinutes;
     public int currentWorldDay;
+    public int playerGold;
     public List<SerializableInventorySlot> inventorySlotsData;
+
+    // Upgrade system data
+    public int speedUpgradeLevel;
+    public int healthUpgradeLevel;
+    public float currentMoveSpeed;
 
     public bool useOverrideSpawnPosition;
     public float overrideSpawnX;
@@ -29,6 +35,9 @@ public class GameData
         lastGameplaySceneName = "Gameplay";
         playerCurrentHP = 3;
         playerMaxHP = 3;
+        speedUpgradeLevel = 0;
+        healthUpgradeLevel = 0;
+        currentMoveSpeed = 5f; // Default speed
 
         currentWorldTimeTotalMinutes = new TimeSpan(21, 0, 0).TotalMinutes;
         currentWorldDay = 1;

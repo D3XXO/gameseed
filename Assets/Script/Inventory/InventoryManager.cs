@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.SceneManagement;
+using System;
 
 public class InventoryManager : MonoBehaviour
 {
@@ -132,6 +133,41 @@ public class InventoryManager : MonoBehaviour
         return false;
     }
 
+    public bool RemoveItemAmount(ItemData itemToRemove, int amount)
+    {
+        if (itemToRemove == null || amount <= 0) return false;
+
+        // Cari semua slot yang memiliki item ini
+        List<InventorySlot> matchingSlots = inventorySlots.Where(slot => slot.itemData == itemToRemove).ToList();
+
+        if (matchingSlots.Sum(slot => slot.amount) < amount)
+        {
+            Debug.Log("Not enough items to remove");
+            return false;
+        }
+
+        // Hapus item dari slot secara berurutan
+        foreach (InventorySlot slot in matchingSlots)
+        {
+            if (amount <= 0) break;
+
+            int removeAmount = Math.Min(amount, slot.amount);
+            slot.RemoveAmount(removeAmount);
+            amount -= removeAmount;
+
+            if (slot.IsEmpty())
+            {
+                slot.Clear();
+                if (activeHandSlot.itemData == itemToRemove)
+                {
+                    ClearActiveHandItem();
+                }
+            }
+        }
+
+        TriggerInventoryChanged();
+        return true;
+    }
     public bool RemoveItem(ItemData itemToRemove, int amount = 1)
     {
         InventorySlot targetSlot = inventorySlots.FirstOrDefault(slot => slot.itemData == itemToRemove && slot.amount >= amount);

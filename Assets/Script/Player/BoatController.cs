@@ -143,6 +143,12 @@ public class BoatController : MonoBehaviour
         }
     }
 
+    public void IncreaseMaxHealth(int amount)
+    {
+        maxHP += amount;
+        currentHP += amount; // Also heal the boat
+        OnHealthChanged?.Invoke(currentHP, maxHP);
+    }
     void MoveBoat()
     {
         if (isKnockedBack || !movementEnabled) return;

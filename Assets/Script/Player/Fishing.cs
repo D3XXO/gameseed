@@ -32,6 +32,7 @@ public class Fishing : MonoBehaviour
     private bool fishBiteDetected = false;
     private bool waitingToReel = false;
     public float fishingProgress;
+    private EnemyAI[] enemyAIs;
 
     [Header("Throwing Settings")]
     public float throwDistance;
@@ -51,6 +52,12 @@ public class Fishing : MonoBehaviour
     public float balanceTargetChangeMaxInterval;
     public float balanceRandomTargetMin;
     public float balanceRandomTargetMax;
+
+    [Header("Fish Caught UI")]
+    public GameObject fishCaughtUI; // Parent panel untuk tampilan ikan yang ditangkap
+    public Image fishImage; // Komponen Image untuk menampilkan gambar ikan
+    public Text fishNameText; // Komponen Text untuk menampilkan nama ikan
+    public float displayDuration = 3f;
 
     [Header("Reeling Bar")]
     public Image reelIndicator;
@@ -99,6 +106,7 @@ public class Fishing : MonoBehaviour
     void Start()
     {
         boatMovement = GetComponent<BoatController>();
+        enemyAIs = FindObjectsOfType<EnemyAI>();
         if (fishingUI != null) fishingUI.SetActive(false);
         if (biteIndicator != null) biteIndicator.SetActive(false);
         if (tensionText != null) tensionText.text = "";
@@ -124,7 +132,6 @@ public class Fishing : MonoBehaviour
             boatMovement.SetMovementEnabled(!(isFishing || isThrowing || fishBiteDetected));
         }
 
-
         if (boatMovement != null && !boatMovement.IsMoving())
         {
             canFish = true;
@@ -133,6 +140,12 @@ public class Fishing : MonoBehaviour
         {
             canFish = false;
             if (isFishing || isThrowing || fishBiteDetected) CancelFishing();
+        }
+
+        if (isThrowing && Input.GetKeyDown(KeyCode.F))
+        {
+            CancelFishing();
+            return; // Keluar agar tidak masuk ke StartThrowing() lagi
         }
 
         if (canFish && !isFishing && !isThrowing && !fishBiteDetected && Input.GetKeyDown(KeyCode.F))
@@ -285,6 +298,15 @@ public class Fishing : MonoBehaviour
         isFishing = true;
 
         if (worldTime != null) worldTime.SetPaused(true);
+        if (boatMovement != null) boatMovement.SetMovementEnabled(false);
+        if (enemyAIs != null)
+        {
+            foreach (var enemy in enemyAIs)
+            {
+                if (enemy != null) enemy.enabled = false;
+            }
+        }
+
 
         currentFish = fishList[Random.Range(0, fishList.Count)];
         if (currentFish == null)
@@ -313,6 +335,15 @@ public class Fishing : MonoBehaviour
         fishBiteDetected = false;
         waitingToReel = false;
 
+        if (boatMovement != null) boatMovement.SetMovementEnabled(true);
+        if (enemyAIs != null)
+        {
+            foreach (var enemy in enemyAIs)
+            {
+                if (enemy != null) enemy.enabled = true;
+            }
+        }
+
         ResetUIElements();
 
         if (worldTime != null) worldTime.SetPaused(false);
@@ -323,6 +354,16 @@ public class Fishing : MonoBehaviour
         fishCaught = true;
         isFishing = false;
 
+        if (boatMovement != null) boatMovement.SetMovementEnabled(true);
+
+        if (enemyAIs != null)
+        {
+            foreach (var enemy in enemyAIs)
+            {
+                if (enemy != null) enemy.enabled = true;
+            }
+        }
+
         ResetUIElements();
 
         if (fishList != null && fishList.Count > 0 && currentFish != null)
@@ -331,10 +372,24 @@ public class Fishing : MonoBehaviour
             {
                 InventoryManager.Instance.AddItem(currentFish.itemData, 1);
                 Debug.Log($"Caught {currentFish.fishName}!");
+
+                // Tampilkan UI ikan yang ditangkap
+                if (fishCaughtUI != null) fishCaughtUI.SetActive(true);
+                if (fishImage != null) fishImage.sprite = currentFish.itemData.icon;
+                if (fishNameText != null) fishNameText.text = currentFish.fishName;
+
+                // Sembunyikan UI setelah beberapa detik
+                StartCoroutine(HideFishCaughtUI());
             }
         }
 
         if (worldTime != null) worldTime.SetPaused(false);
+    }
+
+    IEnumerator HideFishCaughtUI()
+    {
+        yield return new WaitForSeconds(displayDuration);
+        if (fishCaughtUI != null) fishCaughtUI.SetActive(false);
     }
 
     void HandleFishingProgress()
@@ -478,5 +533,7 @@ public class Fishing : MonoBehaviour
 
         if (mainCamera != null) mainCamera.orthographicSize = normalSize;
         if (lineRenderer != null) lineRenderer.enabled = false;
+
+        if (fishCaughtUI != null) fishCaughtUI.SetActive(false);
     }
 }

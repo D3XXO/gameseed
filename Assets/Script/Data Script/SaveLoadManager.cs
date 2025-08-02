@@ -89,6 +89,8 @@ public class SaveLoadManager : MonoBehaviour
     {
         GameData dataToSave;
 
+
+
         string currentScene = SceneManager.GetActiveScene().name;
         bool isCurrentSceneGameplay = false;
         foreach (string sceneName in GameplayScenes)
@@ -98,6 +100,7 @@ public class SaveLoadManager : MonoBehaviour
                 isCurrentSceneGameplay = true;
                 break;
             }
+
         }
 
         if (isCurrentSceneGameplay)
@@ -113,7 +116,14 @@ public class SaveLoadManager : MonoBehaviour
 
                 dataToSave.playerCurrentHP = boat.currentHP;
                 dataToSave.playerMaxHP = boat.maxHP;
+                dataToSave.currentMoveSpeed = boat.moveSpeed;
 
+                UpgradeSystem upgradeSystem = FindObjectOfType<UpgradeSystem>();
+                if (upgradeSystem != null)
+                {
+                    dataToSave.speedUpgradeLevel = upgradeSystem.speedCurrentLevel;
+                    dataToSave.healthUpgradeLevel = upgradeSystem.healthCurrentLevel;
+                }
                 if (currentScene != "Harbour")
                 {
                     dataToSave.lastGameplaySceneName = currentScene;
@@ -152,6 +162,10 @@ public class SaveLoadManager : MonoBehaviour
                 }
             }
         }
+        if (PlayerEconomy.Instance != null)
+        {
+            dataToSave.playerGold = PlayerEconomy.Instance.currentGold;
+        }
 
         return dataToSave;
     }
@@ -178,6 +192,14 @@ public class SaveLoadManager : MonoBehaviour
             }
 
             boat.SetHealth(loadedData.playerCurrentHP, loadedData.playerMaxHP);
+            boat.moveSpeed = loadedData.currentMoveSpeed;
+
+            UpgradeSystem upgradeSystem = FindObjectOfType<UpgradeSystem>();
+            if (upgradeSystem != null)
+            {
+                upgradeSystem.speedCurrentLevel = loadedData.speedUpgradeLevel;
+                upgradeSystem.healthCurrentLevel = loadedData.healthUpgradeLevel;
+            }
         }
 
         if (WorldTime.WorldTime.Instance != null)
@@ -204,5 +226,11 @@ public class SaveLoadManager : MonoBehaviour
             }
             InventoryManager.Instance.TriggerInventoryChanged();
         }
+
+        if (PlayerEconomy.Instance != null)
+        {
+            PlayerEconomy.Instance.SetGold(loadedData.playerGold);
+        }
+
     }
 }

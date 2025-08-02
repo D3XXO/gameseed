@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 public class MarketUI : MonoBehaviour
 {
@@ -12,11 +13,18 @@ public class MarketUI : MonoBehaviour
     public Text totalValueText;
 
     private int totalValue;
-    private InventorySlot[] sellSlots;
+    private Dictionary<InventorySlotUI, int> itemsToSell = new Dictionary<InventorySlotUI, int>();
 
     void Awake()
     {
-        Instance = this;
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            Instance = this;
+        }
         marketPanel.SetActive(false);
     }
 
@@ -26,7 +34,14 @@ public class MarketUI : MonoBehaviour
         marketPanel.SetActive(isActive);
         Time.timeScale = isActive ? 0f : 1f;
 
-        if (isActive) SetupSellSlots();
+        if (isActive)
+        {
+            SetupSellSlots();
+        }
+        else
+        {
+            ClearSellSelection();
+        }
     }
 
     private void SetupSellSlots()
@@ -46,14 +61,41 @@ public class MarketUI : MonoBehaviour
                 var sellSlot = Instantiate(InventoryUI.Instance.inventorySlotUIPrefab, sellSlotsParent);
                 var slotUI = sellSlot.GetComponent<InventorySlotUI>();
                 slotUI.Init(slot, -1);
-                slotUI.SetAsSellSlot();
+                slotUI.SetSellMode(true);
             }
         }
     }
 
+    // This is the method that was missing
     public void AddToSellTotal(int value)
     {
         totalValue += value;
+        UpdateTotalUI();
+    }
+
+    public void RegisterItemForSale(InventorySlotUI slotUI, int amount)
+    {
+        if (itemsToSell.ContainsKey(slotUI))
+        {
+            // Remove previous value from total
+            totalValue -= itemsToSell[slotUI] * slotUI.assignedSlot.itemData.sellPrice;
+
+            if (amount > 0)
+            {
+                itemsToSell[slotUI] = amount;
+                totalValue += amount * slotUI.assignedSlot.itemData.sellPrice;
+            }
+            else
+            {
+                itemsToSell.Remove(slotUI);
+            }
+        }
+        else if (amount > 0)
+        {
+            itemsToSell.Add(slotUI, amount);
+            totalValue += amount * slotUI.assignedSlot.itemData.sellPrice;
+        }
+
         UpdateTotalUI();
     }
 
@@ -65,10 +107,28 @@ public class MarketUI : MonoBehaviour
 
     public void ConfirmSell()
     {
-        PlayerEconomy.Instance.AddGold(totalValue);
+        foreach (var kvp in itemsToSell)
+        {
+            InventorySlotUI slotUI = kvp.Key;
+            int amount = kvp.Value;
 
+            if (slotUI.assignedSlot.itemData != null && amount > 0)
+            {
+                InventoryManager.Instance.RemoveItemAmount(slotUI.assignedSlot.itemData, amount);
+            }
+        }
+
+        PlayerEconomy.Instance.AddGold(totalValue);
+        ClearSellSelection();
         InventoryUI.Instance.UpdateInventoryUI();
         ToggleMarket();
+    }
+
+    private void ClearSellSelection()
+    {
+        itemsToSell.Clear();
+        totalValue = 0;
+        UpdateTotalUI();
     }
 
     public bool IsMarketActive()

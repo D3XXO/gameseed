@@ -327,7 +327,15 @@ MonoBehaviour:
   inventoryPanel: {fileID: 0}
   slotsParent: {fileID: 0}
   inventorySlotUIPrefab: {fileID: 2067370502715945438, guid: e75007491a49d20469d081af272dcea6, type: 3}
-  playerPivotTransform: {fileID: 0}
+  _itemInfoPanel: {fileID: 0}
+  _descriptionText: {fileID: 0}
+  _healButton: {fileID: 0}
+  _deleteButton: {fileID: 0}
+  _deleteConfirmationPanel: {fileID: 0}
+  _deleteAmountSlider: {fileID: 0}
+  _amountText: {fileID: 0}
+  _confirmDeleteButton: {fileID: 0}
+  _cancelDeleteButton: {fileID: 0}
 --- !u!4 &279848254
 Transform:
   m_ObjectHideFlags: 0
@@ -706,7 +714,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6992e73d14262dd448b8044abc8fb9ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _daylength: 600
+  _daylength: 20
   fadeDuration: 2
 --- !u!4 &597723261
 Transform:
@@ -2343,6 +2351,52 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1749740907}
   m_CullTransparentMesh: 1
+--- !u!1 &1753762910
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1753762912}
+  - component: {fileID: 1753762911}
+  m_Layer: 0
+  m_Name: Player Economy
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1753762911
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1753762910}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 814bc7eec167fd64ab34c094383ebd4e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  currentGold: 0
+  goldText: {fileID: 0}
+--- !u!4 &1753762912
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1753762910}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.7784736, y: -0.053994015, z: -9.9916}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1791117411
 GameObject:
   m_ObjectHideFlags: 0
@@ -2375,6 +2429,7 @@ MonoBehaviour:
   newGameButton: {fileID: 1485424801}
   loadGameButton: {fileID: 946092701}
   confirmationCanvas: {fileID: 1749740907}
+  pauseMenuUI: {fileID: 0}
 --- !u!4 &1791117413
 Transform:
   m_ObjectHideFlags: 0
@@ -2777,3 +2832,4 @@ SceneRoots:
   - {fileID: 1795028772}
   - {fileID: 1915449166}
   - {fileID: 1376663500}
+  - {fileID: 1753762912}

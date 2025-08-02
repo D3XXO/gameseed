@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -11,7 +12,7 @@ public class UIButton : MonoBehaviour
     [Header("Confirmation UI")]
     public GameObject confirmationCanvas;
 
-    private GameObject pauseMenuUI;
+    public GameObject pauseMenuUI;
 
     private void OnEnable()
     {
@@ -55,6 +56,8 @@ public class UIButton : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        StartCoroutine(DelayedSetup(scene));
+
         Canvas mainCanvas = FindObjectOfType<Canvas>();
         if (scene.name == "Main Menu")
         {
@@ -103,6 +106,39 @@ public class UIButton : MonoBehaviour
             newGameButton = null;
             loadGameButton = null;
             confirmationCanvas = null;
+        }
+    }
+    private IEnumerator DelayedSetup(Scene scene)
+    {
+        yield return null; // Tunggu 1 frame
+
+        Canvas mainCanvas = FindObjectOfType<Canvas>();
+        if (scene.name == "Main Menu")
+        {
+            // Main menu logic seperti biasa...
+            pauseMenuUI = null;
+        }
+        else
+        {
+            if (mainCanvas != null)
+            {
+                Transform canvasRoot = mainCanvas.transform;
+                Transform pauseObj = canvasRoot.Find("PauseCanvas");
+                if (pauseObj != null)
+                {
+                    pauseMenuUI = pauseObj.gameObject;
+                    pauseMenuUI.SetActive(false);
+                    Debug.Log("PauseCanvas assigned after delay.");
+                }
+                else
+                {
+                    Debug.LogWarning("PauseCanvas not found in gameplay scene.");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("MainCanvas not found in gameplay scene.");
+            }
         }
     }
 
