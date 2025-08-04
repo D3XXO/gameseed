@@ -101,12 +101,20 @@ public class Fishing : MonoBehaviour
     private float randomTargetChangeTimer = 0f;
     private float currentRandomTargetChangeInterval;
 
+    [Header("Fishing SFX")]
+    public FishingSFX fishingSFX; // Referensi ke komponen FishingSFX
+    public AudioClip[] splashSounds; // Suara saat umpan masuk air
+    public AudioClip[] pullSounds; // Suara saat ikan menarik
+    private AudioSource audioSource; // Komponen AudioSource tambahan
+
     [SerializeField] private WorldTime.WorldTime worldTime;
 
     void Start()
     {
         boatMovement = GetComponent<BoatController>();
         enemyAIs = FindObjectsOfType<EnemyAI>();
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
         if (fishingUI != null) fishingUI.SetActive(false);
         if (biteIndicator != null) biteIndicator.SetActive(false);
         if (tensionText != null) tensionText.text = "";
@@ -122,6 +130,15 @@ public class Fishing : MonoBehaviour
         if (fishingRodTip == null)
         {
             fishingRodTip = transform.Find("FishingRodTip") ?? transform;
+        }
+
+        if (fishingSFX == null)
+        {
+            fishingSFX = GetComponent<FishingSFX>();
+            if (fishingSFX == null)
+            {
+                Debug.LogWarning("FishingSFX component not found!");
+            }
         }
     }
 
@@ -183,6 +200,14 @@ public class Fishing : MonoBehaviour
             tensionText.text = $"Tension: {Mathf.RoundToInt(currentLineTension)} / {Mathf.RoundToInt(maxLineTension)}";
         }
 
+        if (fishCaught && boatMovement != null && boatMovement.IsMoving())
+        {
+            if (fishingSFX != null)
+            {
+                fishingSFX.StopReelingSound();
+            }
+        }
+
         HandleCameraZoom();
     }
 
@@ -203,6 +228,7 @@ public class Fishing : MonoBehaviour
         if (balancePlayerIndicator != null) balancePlayerIndicator.gameObject.SetActive(false);
         if (balanceTargetIndicator != null) balanceTargetIndicator.gameObject.SetActive(false);
         if (progressBar != null) progressBar.gameObject.SetActive(false);
+        if (fishingSFX != null) fishingSFX.PlayCastingSound();
 
         randomTargetChangeTimer = 0f;
         currentRandomTargetChangeInterval = Random.Range(balanceTargetChangeMinInterval, balanceTargetChangeMaxInterval);
@@ -238,6 +264,11 @@ public class Fishing : MonoBehaviour
             if (balanceTargetIndicator != null) balanceTargetIndicator.gameObject.SetActive(true);
             if (progressBar != null) progressBar.gameObject.SetActive(true);
 
+            if (splashSounds.Length > 0)
+            {
+                AudioClip randomSplash = splashSounds[Random.Range(0, splashSounds.Length)];
+                audioSource.PlayOneShot(randomSplash);
+            }
             if (throwPower <= 0.1f)
             {
                 Debug.Log("Throw too weak.");
@@ -300,6 +331,7 @@ public class Fishing : MonoBehaviour
         if (worldTime != null) worldTime.SetPaused(true);
         if (boatMovement != null) boatMovement.SetMovementEnabled(false);
         if (enemyAIs != null)
+            if (fishingSFX != null) fishingSFX.StartReelingSound();
         {
             foreach (var enemy in enemyAIs)
             {
@@ -307,7 +339,11 @@ public class Fishing : MonoBehaviour
             }
         }
 
-
+        if (pullSounds.Length > 0)
+        {
+            AudioClip randomPull = pullSounds[Random.Range(0, pullSounds.Length)];
+            audioSource.PlayOneShot(randomPull);
+        }
         currentFish = fishList[Random.Range(0, fishList.Count)];
         if (currentFish == null)
         {
@@ -336,6 +372,7 @@ public class Fishing : MonoBehaviour
         waitingToReel = false;
 
         if (boatMovement != null) boatMovement.SetMovementEnabled(true);
+        if (fishingSFX != null) fishingSFX.StopReelingSound();
         if (enemyAIs != null)
         {
             foreach (var enemy in enemyAIs)
@@ -355,6 +392,13 @@ public class Fishing : MonoBehaviour
         isFishing = false;
 
         if (boatMovement != null) boatMovement.SetMovementEnabled(true);
+        if (fishingSFX != null) fishingSFX.StopReelingSound();
+
+        if (splashSounds.Length > 0)
+        {
+            AudioClip randomSplash = splashSounds[Random.Range(0, splashSounds.Length)];
+            audioSource.PlayOneShot(randomSplash);
+        }
 
         if (enemyAIs != null)
         {
@@ -422,6 +466,7 @@ public class Fishing : MonoBehaviour
 
     void HandleReelBar()
     {
+        bool wasReeling = reelPower > 0.1f;
         if (Input.GetKey(KeyCode.Space))
         {
             reelPower += reelGainSpeed * Time.deltaTime * maxReelPower;
@@ -430,6 +475,8 @@ public class Fishing : MonoBehaviour
         {
             reelPower -= reelDecaySpeed * Time.deltaTime * maxReelPower;
         }
+
+        bool isReeling = reelPower > 0.1f;
 
         reelPower = Mathf.Clamp(reelPower, 0f, maxReelPower);
         if (reelIndicator != null)
@@ -462,6 +509,32 @@ public class Fishing : MonoBehaviour
             }
         }
 
+        if (fishingSFX != null)
+        {
+            if (isReeling && !wasReeling)
+            {
+                fishingSFX.StartReelingSound();
+            }
+            else if (!isReeling && wasReeling)
+            {
+                fishingSFX.StopReelingSound();
+            }
+        }
+
+        if (fishingSFX != null)
+        {
+            float tensionNormalized = currentLineTension / maxLineTension;
+            fishingSFX.SetReelingPitch(Mathf.Lerp(0.9f, 1.1f, tensionNormalized));
+        }
+
+        if (fishCaught)
+        {
+            if (fishingSFX != null && fishingSFX.reelingSource.isPlaying)
+            {
+                fishingSFX.StopReelingSound();
+            }
+            return;
+        }
         currentLineTension += tensionChange;
         currentLineTension = Mathf.Clamp(currentLineTension, 0f, maxLineTension);
     }

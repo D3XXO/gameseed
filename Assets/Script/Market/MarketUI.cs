@@ -61,7 +61,7 @@ public class MarketUI : MonoBehaviour
                 var sellSlot = Instantiate(InventoryUI.Instance.inventorySlotUIPrefab, sellSlotsParent);
                 var slotUI = sellSlot.GetComponent<InventorySlotUI>();
                 slotUI.Init(slot, -1);
-                slotUI.SetSellMode(true);
+                slotUI.SetAsSellSlot();
             }
         }
     }
@@ -114,7 +114,7 @@ public class MarketUI : MonoBehaviour
 
             if (slotUI.assignedSlot.itemData != null && amount > 0)
             {
-                InventoryManager.Instance.RemoveItemAmount(slotUI.assignedSlot.itemData, amount);
+                InventoryManager.Instance.RemoveItem(slotUI.assignedSlot.itemData, amount);
             }
         }
 

@@ -2,8 +2,11 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+
+
 
 public class BoatController : MonoBehaviour
 {
@@ -31,7 +34,7 @@ public class BoatController : MonoBehaviour
     [Header("Lightning Effects")]
     public float lightningHitSlowdown;
     public float slowdownDuration;
-    private float originalMoveSpeed;
+    public float originalMoveSpeed;
     private bool isSlowed = false;
 
     [Header("Knockback Settings")]
@@ -46,6 +49,7 @@ public class BoatController : MonoBehaviour
     private Vector2 isoRight;
     private Vector2 isoDown;
     private Vector2 isoLeft;
+    private Animator animator;
 
     void Start()
     {
@@ -55,6 +59,7 @@ public class BoatController : MonoBehaviour
         isoLeft = -isoRight;
 
         rb = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
         if (rb == null)
         {
             rb = gameObject.AddComponent<Rigidbody2D>();
@@ -68,6 +73,15 @@ public class BoatController : MonoBehaviour
         currentSpeed = moveSpeed;
 
         transform.position = SnapToGrid(transform.position);
+
+        if (animator != null)
+        {
+            animator.SetFloat("LastInputX", 0);
+            animator.SetFloat("LastInputY", 1); // Default to facing up
+            animator.SetFloat("InputX", 0);
+            animator.SetFloat("InputY", 0);
+            animator.SetBool("isWalking", false);
+        }
 
         if (collectPivot == null)
         {
@@ -97,7 +111,9 @@ public class BoatController : MonoBehaviour
         {
             GameData data = SaveLoadManager.Instance.LoadGame();
             string currentScene = SceneManager.GetActiveScene().name;
-
+            moveSpeed = data.currentMoveSpeed;
+            originalMoveSpeed = data.currentMoveSpeed;
+            SetHealth(data.playerCurrentHP, data.playerMaxHP);
             if (SaveLoadManager.Instance != null &&
             Array.Exists(SaveLoadManager.Instance.GameplayScenes,
             scene => scene == currentScene && scene != "Harbour"))
@@ -112,7 +128,7 @@ public class BoatController : MonoBehaviour
     {
         HandleInput();
         HandleLightingInput();
-        HandleInventoryInput();
+        
     }
 
     void FixedUpdate()
@@ -136,11 +152,50 @@ public class BoatController : MonoBehaviour
         {
             inputDirection.Normalize();
             _isMoving = true;
+
+            // Update animation parameters
+            if (animator != null)
+            {
+                animator.SetBool("isWalking", true);
+                animator.SetFloat("InputX", inputDirection.x);
+                animator.SetFloat("InputY", inputDirection.y);
+
+                // Only update last input when actually moving
+                animator.SetFloat("LastInputX", inputDirection.x);
+                animator.SetFloat("LastInputY", inputDirection.y);
+            }
         }
         else
         {
             _isMoving = false;
+            if (animator != null)
+            {
+                animator.SetBool("isWalking", false);
+                // Reset current input but keep last input
+                animator.SetFloat("InputX", 0);
+                animator.SetFloat("InputY", 0);
+            }
         }
+    }
+
+    public static BoatController Instance;
+
+    void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            Instance = this;
+        }
+    }
+
+    public void IncreaseMoveSpeed(float amount)
+    {
+        moveSpeed += amount;
+        originalMoveSpeed += amount;
     }
 
     public void IncreaseMaxHealth(int amount)
@@ -318,19 +373,31 @@ public class BoatController : MonoBehaviour
         }
     }
 
+    public void LoadFromGameData(GameData data)
+    {
+        // Load stat movement
+        moveSpeed = data.currentMoveSpeed;
+        originalMoveSpeed = data.currentMoveSpeed;
+
+        // Load stat health
+        maxHP = data.playerMaxHP;
+        currentHP = data.playerCurrentHP;
+
+        // Update UI health jika ada
+        OnHealthChanged?.Invoke(currentHP, maxHP);
+    }
+
+    public GameData SaveToGameData(GameData data)
+    {
+        data.currentMoveSpeed = moveSpeed;
+        data.playerMaxHP = maxHP;
+        data.playerCurrentHP = currentHP;
+        return data;
+    }
+
     public void FlashRed()
     {
         StartCoroutine(FlashRoutine());
-    }
-
-    void HandleInventoryInput()
-    {
-        if (SceneManager.GetActiveScene().name == "Harbour") return;
-
-        if (Input.GetKeyDown(KeyCode.Tab))
-        {
-            InventoryUI.Instance.ToggleInventory();
-        }
     }
 
     IEnumerator FlashRoutine()

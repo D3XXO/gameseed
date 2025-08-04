@@ -30,4 +30,15 @@ public class PanelBlock : MonoBehaviour
             if (col != null) col.enabled = !anyPanelActive;
         }
     }
+
+    void Awake()
+    {
+        foreach (GameObject panel in blockingPanels)
+        {
+            if (panel != null)
+            {
+                panel.SetActive(false);
+            }
+        }
+    }
 }

@@ -45,9 +45,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sharkPrefab: {fileID: 1514825685402016975, guid: ba88648806b8f0b4a89770e1721edd00, type: 3}
-  spawnInterval: 5
+  spawnInterval: 1
   maxSharks: 1
-  spawnRadius: 10
+  spawnRadius: 100
   groundLayer:
     serializedVersion: 2
     m_Bits: 16

@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using System;
 
 public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
 {
@@ -15,14 +14,12 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
 
     [Header("Selling")]
     public Image sellOverlay;
-    public Text sellAmountText;
     private bool isSellMode;
     private int sellAmount;
 
     void Awake()
     {
         if (selectionBorder != null) selectionBorder.enabled = false;
-        if (sellOverlay != null) sellOverlay.gameObject.SetActive(false);
     }
 
     public void Init(InventorySlot slot, int index)
@@ -41,7 +38,6 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
             itemIcon.gameObject.SetActive(false);
             itemAmountText.text = "";
             ResetSelection();
-            ResetSellSelection();
         }
         else
         {
@@ -53,40 +49,20 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (!isSellMode)
-        {
-            if (eventData.button == PointerEventData.InputButton.Left)
-            {
-                InventoryUI.Instance.OnInventorySlotClicked(this, assignedSlot);
-            }
-            return;
-        }
-
         if (eventData.button == PointerEventData.InputButton.Left)
         {
-            ToggleItemForSale();
+            InventoryUI.Instance.OnInventorySlotClicked(this, assignedSlot);
+        }
 
-            // Update market UI
-            if (sellAmount > 0)
-            {
-                MarketUI.Instance.AddToSellTotal(assignedSlot.itemData.sellPrice);
-                MarketUI.Instance.RegisterItemForSale(this, sellAmount);
-            }
-            else
-            {
-                MarketUI.Instance.AddToSellTotal(-assignedSlot.itemData.sellPrice * assignedSlot.amount);
-                MarketUI.Instance.RegisterItemForSale(this, 0);
-            }
+        if (isSellMode && eventData.button == PointerEventData.InputButton.Left)
+        {
+            ToggleItemForSale();
         }
     }
 
-    public void SetSellMode(bool active)
+    public void SetAsSellSlot()
     {
-        isSellMode = active;
-        if (!active)
-        {
-            ResetSellSelection();
-        }
+        isSellMode = true;
     }
 
     private void ToggleItemForSale()
@@ -96,43 +72,16 @@ public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
         if (sellAmount < assignedSlot.amount)
         {
             sellAmount++;
+            sellOverlay.gameObject.SetActive(true);
+            sellOverlay.GetComponentInChildren<Text>().text = sellAmount.ToString();
+            MarketUI.Instance.AddToSellTotal(assignedSlot.itemData.sellPrice);
         }
         else
         {
             sellAmount = 0;
-        }
-
-        UpdateSellUI();
-    }
-
-    private void UpdateSellUI()
-    {
-        if (sellAmount > 0)
-        {
-            sellOverlay.gameObject.SetActive(true);
-            if (sellAmountText != null)
-            {
-                sellAmountText.text = sellAmount.ToString();
-            }
-        }
-        else
-        {
             sellOverlay.gameObject.SetActive(false);
+            MarketUI.Instance.AddToSellTotal(-assignedSlot.itemData.sellPrice * assignedSlot.amount);
         }
-    }
-
-    public void ResetSellSelection()
-    {
-        sellAmount = 0;
-        if (sellOverlay != null)
-        {
-            sellOverlay.gameObject.SetActive(false);
-        }
-    }
-
-    public int GetSellAmount()
-    {
-        return sellAmount;
     }
 
     public void ResetSelection()

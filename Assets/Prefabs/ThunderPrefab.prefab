@@ -46,8 +46,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c17c4882f2f0cf46afb08a78fbd1672, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activeDuration: 4
-  knockbackForce: 5
+  knockbackForce: 1
   damage: 1
 --- !u!212 &3952283936702004300
 SpriteRenderer:

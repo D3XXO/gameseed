@@ -11,7 +11,7 @@ public class SaveLoadManager : MonoBehaviour
 
     private string savePath;
 
-    [SerializeField] private string[] _gameplayScenes = {"Gameplay", "Harbour"};
+    [SerializeField] private string[] _gameplayScenes = { "Gameplay", "Harbour" };
     public string[] GameplayScenes => _gameplayScenes;
 
     void Awake()
@@ -92,7 +92,7 @@ public class SaveLoadManager : MonoBehaviour
 
 
         string currentScene = SceneManager.GetActiveScene().name;
-        bool isCurrentSceneGameplay = false;
+        bool isCurrentSceneGameplay = Array.Exists(GameplayScenes, scene => scene == currentScene);
         foreach (string sceneName in GameplayScenes)
         {
             if (currentScene == sceneName)
@@ -117,13 +117,12 @@ public class SaveLoadManager : MonoBehaviour
                 dataToSave.playerCurrentHP = boat.currentHP;
                 dataToSave.playerMaxHP = boat.maxHP;
                 dataToSave.currentMoveSpeed = boat.moveSpeed;
-
-                UpgradeSystem upgradeSystem = FindObjectOfType<UpgradeSystem>();
-                if (upgradeSystem != null)
+                if (UpgradeManager.Instance != null)
                 {
-                    dataToSave.speedUpgradeLevel = upgradeSystem.speedCurrentLevel;
-                    dataToSave.healthUpgradeLevel = upgradeSystem.healthCurrentLevel;
+                    dataToSave.speedUpgradeLevel = UpgradeManager.Instance.currentSpeedUpgradeLevel;
+                    dataToSave.healthUpgradeLevel = UpgradeManager.Instance.currentHealthUpgradeLevel;
                 }
+
                 if (currentScene != "Harbour")
                 {
                     dataToSave.lastGameplaySceneName = currentScene;
@@ -178,6 +177,7 @@ public class SaveLoadManager : MonoBehaviour
         BoatController boat = FindObjectOfType<BoatController>();
         if (boat != null)
         {
+
             if (loadedData.useOverrideSpawnPosition)
             {
                 Vector3 spawnPos = new Vector3(loadedData.overrideSpawnX, loadedData.overrideSpawnY, loadedData.overrideSpawnZ);
@@ -193,13 +193,12 @@ public class SaveLoadManager : MonoBehaviour
 
             boat.SetHealth(loadedData.playerCurrentHP, loadedData.playerMaxHP);
             boat.moveSpeed = loadedData.currentMoveSpeed;
+            boat.originalMoveSpeed = loadedData.currentMoveSpeed;
+        }
 
-            UpgradeSystem upgradeSystem = FindObjectOfType<UpgradeSystem>();
-            if (upgradeSystem != null)
-            {
-                upgradeSystem.speedCurrentLevel = loadedData.speedUpgradeLevel;
-                upgradeSystem.healthCurrentLevel = loadedData.healthUpgradeLevel;
-            }
+        if (UpgradeManager.Instance != null)
+        {
+            UpgradeManager.Instance.LoadFromGameData(loadedData);
         }
 
         if (WorldTime.WorldTime.Instance != null)

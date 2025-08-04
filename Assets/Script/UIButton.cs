@@ -40,6 +40,7 @@ public class UIButton : MonoBehaviour
 
     private void Update()
     {
+        HandleInventoryInput();
         if (SceneManager.GetActiveScene().name != "Main Menu" && pauseMenuUI != null && Input.GetKeyDown(KeyCode.Escape))
         {
             // Toggle pause menu
@@ -142,6 +143,17 @@ public class UIButton : MonoBehaviour
         }
     }
 
+
+    
+    void HandleInventoryInput()
+    {
+        if (SceneManager.GetActiveScene().name == "Harbour") return;
+
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            InventoryUI.Instance.ToggleInventory();
+        }
+    }
     void InitializeMainMenuButtons()
     {
         bool saveFileExists = SaveLoadManager.Instance.DoesSaveFileExist();

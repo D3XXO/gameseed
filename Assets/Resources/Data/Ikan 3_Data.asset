@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Ikan 3_Data
   m_EditorClassIdentifier: 
   id: Ikan03
-  itemName: Mas
+  itemName: Ikan Mas
   icon: {fileID: 21300000, guid: 3ab3c66c389eeb44ead568c55fc4d6d6, type: 3}
   description: 
   isStackable: 1
   maxStackSize: 0
   itemType: 1
   healAmount: 0
-  sellPrice: 0
+  sellPrice: 1
   canBeSold: 1
